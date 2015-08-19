@@ -1,0 +1,15 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Icons/Data-List-icon.png</file>
+        <file>Icons/pictureflowicon.png</file>
+        <file>Icons/MovieInfo2.png</file>
+        <file>Icons/AddMovies.png</file>
+        <file>Icons/playmov.png</file>
+        <file>Icons/openFolder1.png</file>
+        <file>Icons/Document-new-icon.png</file>
+        <file>Icons/Devices-media-floppy-icon.png</file>
+        <file>Icons/2-Movies-icon2.png</file>
+        <file>Icons/layout-grid2.png</file>
+        <file>Icons/Play.png</file>
+    </qresource>
+</RCC>
