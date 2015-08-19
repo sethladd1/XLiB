@@ -9,17 +9,19 @@ SideBar::SideBar(QWidget *parent) :QWidget(parent)
     title = new QLabel(this);
     picture = new QLabel(this);
     director = new QLabel(this);
+    writer = new QLabel(this);
     director->setWordWrap(true);
 
-    imdbPage = new Link(this);
-    starring->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    imdbPage = new QLabel(this);
+    starring->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
     starring->setWordWrap(true);
 
     plot->setTextInteractionFlags(Qt::TextSelectableByMouse);
     title->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    director->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    director->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
     imdbPage->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
-    title->setForegroundRole(QPalette::ButtonText);
+    writer->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
+    writer->setWordWrap(true);
     title->setFont(QFont("Times", 13, QFont::Bold));
 
     vLayout = new QVBoxLayout(this);
@@ -28,13 +30,25 @@ SideBar::SideBar(QWidget *parent) :QWidget(parent)
     vLayout->addWidget(plot);
     vLayout->addWidget(starring);
     vLayout->addWidget(director);
+    vLayout->addWidget(writer);
     vLayout->addWidget(imdbPage);
+
+    imdbPage->setTextFormat(Qt::RichText);
+    writer->setTextFormat(Qt::RichText);
+    director->setTextFormat(Qt::RichText);
+    starring->setTextFormat(Qt::RichText);
+    imdbPage->setAlignment(Qt::AlignHCenter);
+    plot->setAlignment(Qt::AlignHCenter);
+    plot->setWordWrap(true);
+    connect(imdbPage, SIGNAL(linkActivated(QString)), this, SLOT(linkActivated(QString)));
+    connect(writer, SIGNAL(linkActivated(QString)), this, SLOT(linkActivated(QString)));
+    connect(director, SIGNAL(linkActivated(QString)), this, SLOT(linkActivated(QString)));
+    connect(starring, SIGNAL(linkActivated(QString)), this, SLOT(linkActivated(QString)));
+    connect(writer, SIGNAL(linkHovered(QString)), this, SLOT(writerLinkHovered(QString)));
+    connect(director, SIGNAL(linkHovered(QString)), this, SLOT(directorLinkHovered(QString)));
+    connect(starring, SIGNAL(linkHovered(QString)), this, SLOT(starringLinkHovered(QString)));
 }
-void SideBar::populate(QTreeWidgetItem *item, QMap<QString, int> headerMap){
-    int plotHeight = 0;
-    int titleHeight = 0;
-    int castHeight = 0;
-    int directorHeight = 0;
+void SideBar::populate(QTreeWidgetItem *item, QMap<QString, int> headerMap, CastAndCrewLinks *links){
 
     QString titlestr = item->text(headerMap.value("Title"));
     if(!item->text(headerMap.value("Year")).isEmpty())
@@ -42,16 +56,8 @@ void SideBar::populate(QTreeWidgetItem *item, QMap<QString, int> headerMap){
     title->setText(titlestr);
     title->setWordWrap(true);
     title->setAlignment(Qt::AlignHCenter);
-    titleHeight = title->heightForWidth(maximumWidth());
-
     plot->setText("\n" + item->text(headerMap.value("Plot")) + "\n");
-    plot->setWordWrap(true);
-    plotHeight = plot->heightForWidth(maximumWidth());
-    QString castStr;
-    if(!item->text(headerMap.value("Starring")).isEmpty())
-        castStr = "Starring: " + item->text(headerMap.value("Starring")) + "\n";
-    starring->setText(castStr);
-    castHeight = starring->heightForWidth(maximumWidth());
+
 
     QPixmap pix(200,200);
     if(!item->text(headerMap.value("Icon6154")).isEmpty())
@@ -61,35 +67,73 @@ void SideBar::populate(QTreeWidgetItem *item, QMap<QString, int> headerMap){
     pix = pix.scaled(200,200,Qt::KeepAspectRatio);
     picture->setPixmap(pix);
     picture->setAlignment(Qt::AlignCenter);
+    QString castStr;
+    QStringList castStrList;
+    if(!item->text(headerMap.value("Starring")).isEmpty()){
+        castStr = "Starring: ";
+        castStrList = item->text(headerMap.value("Starring")).split(", ", QString::SkipEmptyParts);
+        for(int i=0; i<castStrList.size(); ++i){
+            if(!links->castLinks.value(castStrList[i]).isEmpty()){
+                castStr.append("<a href=\""+links->castLinks.value(castStrList[i])+"\">"+castStrList[i]+"</a>");
+            }
+            else
+                castStr.append(castStrList[i]);
+            if(i<castStrList.size()-1)
+                castStr.append(", ");
+        }
+    }
+    castStr.append("\n");
+    starring->setText(castStr);
     QString directorStr;
-    if(!item->text(headerMap.value("Director")).isEmpty())
-        directorStr = "Director: " + item->text(headerMap.value("Director")) + "\n";
+    QStringList directorStrList;
+    if(!item->text(headerMap.value("Director")).isEmpty()){
+        directorStr = "Director: ";
+        directorStrList = item->text(headerMap.value("Director")).split(", ", QString::SkipEmptyParts);
+        for(int i=0; i<directorStrList.size(); ++i){
+            if(!links->directorLinks.value(directorStrList[i]).isEmpty()){
+                directorStr.append("<a href=\""+links->directorLinks.value(directorStrList[i])+"\">"+directorStrList[i]+"</a>");
+            }
+            else
+                directorStr.append(directorStrList[i]);
+            if(i<directorStrList.size()-1)
+                directorStr.append(", ");
+        }
+    }
+    directorStr.append("\n");
     director->setText(directorStr);
-
-    directorHeight = director->heightForWidth(maximumWidth());
+    QString writerStr;
+    QStringList writerStrList;
+    if(!item->text(headerMap.value("Writer")).isEmpty()){
+        writerStr = "Writer: ";
+        writerStrList = item->text(headerMap.value("Writer")).split(", ", QString::SkipEmptyParts);
+        for(int i=0; i<writerStrList.size(); ++i){
+            if(!links->writerLinks.value(writerStrList[i]).isEmpty()){
+                writerStr.append("<a href=\""+links->writerLinks.value(writerStrList[i])+"\">"+writerStrList[i]+"</a>");
+            }
+            else
+                writerStr.append(writerStrList[i]);
+            if(i<writerStrList.size()-1)
+                writerStr.append(", ");
+        }
+    }
+    writerStr.append("\n");
+    writer->setText(writerStr);
+    //    director->setAlignment(Qt::AlignHCenter);
     if(!item->text(headerMap.value("imdbID")).isEmpty()){
-        imdbPage->setEnabled(true);
         imdbURL = "http://www.imdb.com/title/" + item->text(headerMap.value("imdbID"));
-        imdbPage->setURL(imdbURL);
-        imdbPage->setText("Go to IMDb page");
-
+        imdbPage->setText("<a href=\""+imdbURL + "\" >Go to IMDb page</a>");
+        imdbPage->setToolTip(imdbURL);
     }
     else{
         imdbPage->clear();
-        imdbPage->setURL(QString());
-        imdbPage->setDisabled(true);
     }
 
-    int height = titleHeight + castHeight + plotHeight + directorHeight + pix.height() + 120;
-
+    int height = vLayout->heightForWidth(250);
     setMinimumHeight(height);
     resize(maximumWidth(),height);
-    repaint();
 }
 void SideBar::clear(){
     imdbPage->clear();
-    imdbPage->setURL(QString());
-    imdbPage->setDisabled(true);
     picture->clear();
     title->clear();
     plot->clear();
@@ -97,28 +141,26 @@ void SideBar::clear(){
     starring->clear();
 }
 
-Link::Link(QString &text, QWidget *parent, Qt::WindowFlags f) : QLabel(text, parent, f){
-    setForegroundRole(QPalette::Link);
-    setCursor(QCursor(Qt::PointingHandCursor));
-}
-Link::Link(QWidget *parent, Qt::WindowFlags f) : QLabel(parent, f){
-    setForegroundRole(QPalette::Link);
-    setCursor(QCursor(Qt::PointingHandCursor));
-}
-void Link::setURL(QString url){
-    Link::url = url;
-}
-void Link::mousePressEvent(QMouseEvent *ev){
-    if(!url.isEmpty()){
+void SideBar::linkActivated(QString link){
+
+    if(!link.isEmpty()){
         QProcess pro;
         QStringList args;
-        args.append(url);
+        args.append(link);
         if(QSysInfo::kernelType() == "linux")
             pro.startDetached("xdg-open", args);
         else
             if(QSysInfo::kernelType() == "windows")
                 pro.startDetached("start", args);
     }
-
+}
+void SideBar::starringLinkHovered(QString link){
+    starring->setToolTip(link);
 }
 
+void SideBar::writerLinkHovered(QString link){
+    writer->setToolTip(link);
+}
+void SideBar::directorLinkHovered(QString link){
+    director->setToolTip(link);
+}

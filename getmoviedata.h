@@ -3,6 +3,7 @@
 #include <QtCore>
 #include <QtNetwork>
 #include <QImage>
+#include "castandcrewlinks.h"
 class GetMovieData : public QObject
 {
     Q_OBJECT
@@ -24,6 +25,8 @@ public:
     QString posterURL();
     QString plot();
     QString imdbID();
+
+    CastAndCrewLinks *peopleLinks();
     bool success();
     bool isTV();
     int season();
@@ -55,9 +58,12 @@ private:
     QUrl _posterURL;
     QNetworkReply *reply;
     QAbstractItemModel *data;
+    CastAndCrewLinks *links;
+    QString creditsURL;
 private slots:
     void readxml();
     void setPoster();
+    void readPeopleLinks();
 signals:
     void finishedDownloading(GetMovieData* instance);
 

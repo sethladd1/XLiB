@@ -19,7 +19,8 @@ SOURCES += main.cpp\
     columneditdialog.cpp \
     getmoviedata.cpp \
     getmoviedatapromptdialog.cpp \
-    sidebar.cpp
+    sidebar.cpp \
+    castandcrewlinks.cpp
 
 HEADERS  += mainwindow.h \
     tree.h \
@@ -27,7 +28,8 @@ HEADERS  += mainwindow.h \
     columneditdialog.h \
     getmoviedata.h \
     getmoviedatapromptdialog.h \
-    sidebar.h
+    sidebar.h \
+    castandcrewlinks.h
 
 RESOURCES += \
     resources.qrc

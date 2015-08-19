@@ -1245,6 +1245,26 @@ void PictureFlow::keyPressEvent(QKeyEvent* event)
         return;
     }
 
+    if(event->key() == Qt::Key_Up)
+    {
+        if(event->modifiers() == Qt::ControlModifier)
+            showSlide(currentSlide()-10);
+        else
+            showPrevious();
+        event->accept();
+        return;
+    }
+
+    if(event->key() == Qt::Key_Down)
+    {
+        if(event->modifiers() == Qt::ControlModifier)
+            showSlide(currentSlide()+10);
+        else
+            showNext();
+        event->accept();
+        return;
+    }
+
     if (event->key() == Qt::Key_Enter || event->key() == Qt::Key_Select) {
         emit itemActivated(d->getTarget());
         event->accept();

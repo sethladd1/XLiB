@@ -115,6 +115,9 @@ QString GetMovieData::director(){
 QString GetMovieData::imdbID(){
     return _imdbID;
 }
+CastAndCrewLinks* GetMovieData::peopleLinks(){
+    return links;
+}
 
 void GetMovieData::readxml(){
     QXmlStreamReader reader(reply);
@@ -176,6 +179,7 @@ void GetMovieData::readxml(){
                 }
                 if(att.at(i).name().toString() == "imdbID"){
                     _imdbID = att.at(i).value().toString();
+                    creditsURL = "http://www.imdb.com/title/"+_imdbID + "/fullcredits";
                 }
                 if(att.at(i).name().toString() == "type"){
                     if(att.at(i).value().toString()=="episode")
@@ -194,5 +198,65 @@ void GetMovieData::readxml(){
 
 void GetMovieData::setPoster(){
     _poster = _poster.fromData(reply->readAll());
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    reply = manager->get(QNetworkRequest(QUrl(creditsURL)));
+    connect(reply, SIGNAL(finished()), this, SLOT(readPeopleLinks()));
+}
+void GetMovieData::readPeopleLinks(){
+
+    QStringList directorsList = _director.split(", ", QString::SkipEmptyParts);
+    QStringList writersList =  _writers.split(", ", QString::SkipEmptyParts);
+    QStringList actorsList = _starring.split(", ", QString::SkipEmptyParts);
+    QRegExp regExp;
+
+    QByteArray arr = reply->readAll();
+    QString html(arr);
+    html.remove("\n");
+    QString pattern;
+    QString link;
+    QString person;
+    links = new CastAndCrewLinks;
+    for(int i = 0; i<directorsList.size(); ++i){
+        person = directorsList[i];
+        if(person.contains("(")){
+            person.truncate(person.indexOf("("));
+            person = person.trimmed();
+        }
+        pattern = "href=\"/name/nm[0-9]{7,7}.{0,100}" + person;
+        regExp.setPattern(pattern);
+        int index = regExp.indexIn(html);
+        if(index>0){
+            link = "http://www.imdb.com" + html.mid(index+6, 16);
+            links->directorLinks.insert(directorsList[i], link);
+        }
+    }
+    for(int i = 0; i<actorsList.size(); ++i){
+        person = actorsList[i];
+        if(person.contains("(")){
+            person.truncate(person.indexOf("("));
+            person = person.trimmed();
+        }
+        pattern = "href=\"/name/nm[0-9]{7,7}.{0,100}" + person;
+        regExp.setPattern(pattern);
+        int index = regExp.indexIn(html);
+        if(index>0){
+            link = "http://www.imdb.com" + html.mid(index+6, 16);
+            links->castLinks.insert(actorsList[i], link);
+        }
+    }
+    for(int i = 0; i<writersList.size(); ++i){
+        person = writersList[i];
+        if(person.contains("(")){
+            person.truncate(person.indexOf("("));
+            person = person.trimmed();
+        }
+        pattern = "href=\"/name/nm[0-9]{7,7}.{0,100}" + person;
+        regExp.setPattern(pattern);
+        int index = regExp.indexIn(html);
+        if(index>0){
+            link = "http://www.imdb.com" + html.mid(index+6, 16);
+            links->writerLinks.insert(writersList[i], link);
+        }
+    }
     emit finishedDownloading(this);
 }

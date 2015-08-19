@@ -53,6 +53,10 @@ MainWindow::MainWindow(int argc, char *argv[], QWidget *parent) :
     pictureFlow = new PictureFlow(this);
     pictureFlow->setSlideSize(QSize(230, 300));
     page = new QSplitter(Qt::Vertical, this);
+    timer = new QTimer(this);
+    timer->setSingleShot(true);
+    sidebarTimer = new QTimer(this);
+    sidebarTimer->setSingleShot(true);
 
     list->hide();
     page->addWidget(pictureFlow);
@@ -75,13 +79,13 @@ MainWindow::MainWindow(int argc, char *argv[], QWidget *parent) :
     horPage->addWidget(page);
     setCentralWidget(horPage);
 
-    timer = new QTimer(this);
     pictureFlow->setMinimumHeight(300);
 
     resize(700, maximumHeight());
     setWindowTitle("[*]untitled");
     setWindowModified(false);
     setMouseTracking(true);
+
     if(argc>1){
         QTimer *t = new QTimer(this);
         openFile = argv[argc-1];
@@ -218,6 +222,8 @@ void MainWindow::createConnections(){
     connect(iconViewAction, SIGNAL(toggled(bool)), this, SLOT(iconViewToggled(bool)));
     connect(pictureFlow, SIGNAL(itemActivated(int)), this, SLOT(coverItemActivated(int)));
     connect(deleteAction, SIGNAL(triggered()), this, SLOT(removeMovie()));
+    connect(timer, SIGNAL(timeout()), this, SLOT(timerExpired()));
+    connect(sidebarTimer, SIGNAL(timeout()), this, SLOT(sidebarTimerExpired()));
 
 }
 void MainWindow::createContextMenu(){
@@ -273,7 +279,7 @@ void MainWindow::selectCover(){
     QIcon icon;
     icon.addFile(newCover);
     item->setIcon(0, icon);
-    sidebar->populate(tree->currentItem(), tree->getHeaderMap());
+    sidebar->populate(tree->currentItem(), tree->getHeaderMap(), tree->getLinks().value(tree->currentItem()));
 }
 
 void MainWindow::removeMovie(){
@@ -287,13 +293,13 @@ void MainWindow::removeMovie(){
     setupPictureFlow();
     if(prev >= 0){
         tree->setCurrentItem(tree->topLevelItem(prev));
-        sidebar->populate(tree->topLevelItem(prev), tree->getHeaderMap());
+        sidebar->populate(tree->topLevelItem(prev), tree->getHeaderMap(), tree->getLinks().value(tree->topLevelItem(prev)));
         pictureFlow->setCurrentSlide(prev);
     }
     else
         if(next<tree->topLevelItemCount()){
             tree->setCurrentItem(tree->topLevelItem(next));
-            sidebar->populate(tree->topLevelItem(next), tree->getHeaderMap());
+            sidebar->populate(tree->topLevelItem(next), tree->getHeaderMap(), tree->getLinks().value(tree->topLevelItem(next)));
             pictureFlow->setCurrentSlide(next);
         }
         else
@@ -314,6 +320,7 @@ bool MainWindow::saveLibrary(const QString &fileName)
         writer->writeEndDocument();
         file->close();
         curFile = fileName;
+        setWindowTitle("[*]" + QFileInfo(curFile).fileName());
         setWindowModified(false);
         return true;
     }
@@ -368,16 +375,16 @@ void MainWindow::importFiles(){
                     size = QString().number(d/1000,'f',1) +"KB";
                 else
                     size = QString().number(d,'f',1) +"B";
-        treeItem->setText(hMap.value("Size"), size);
-        tree->addTopLevelItem(treeItem);
-        tree->setCurrentItem(treeItem);
-        sidebar->populate(treeItem, hMap);
+        treeItem->setText(hMap.value("Size"), size);       
         items.append(treeItem);
     }
     if(items.size()){
         setupPictureFlow();
         setWindowModified(true);
         getFilmData(items);
+        tree->addTopLevelItems(items);
+        tree->setCurrentItem(treeItem);
+        sidebar->populate(treeItem, hMap, tree->getLinks().value(treeItem));
     }
 }
 
@@ -402,47 +409,61 @@ void MainWindow::openLibrary(const QString &fileName){
     if(reader->device()->isReadable()){
         tree->clear();
         pictureFlow->clear();
-        reader->readNextStartElement();
-        reader->readNextStartElement();
-        if(reader->name() == "Settings"){
-            QXmlStreamAttributes att = reader->attributes();
-            for(int i = 0; i<att.count(); ++i){
-                if(att[i].name().toString()=="Tree"){
-                    if(att[i].value().toString() == "Show")
-                        tree->show();
-                    else
-                        if(att[i].value().toString() == "Hide")
-                            tree->hide();
-                }
-                else{
-                    if(att[i].name().toString()=="PictureFlow"){
+        if(!reader->readNextStartElement()){
+            QMessageBox::information(this,"Incorrect File Format", "This is not the right type of file", QMessageBox::Ok);
+            return;
+        }
+        if(reader->name()=="Library"){
+
+            if(!reader->readNextStartElement()){
+                QMessageBox::information(this,"Incorrect File Format", "This is not the right type of file", QMessageBox::Ok);
+                return;
+            }
+            if(reader->name() == "Settings"){
+                QXmlStreamAttributes att = reader->attributes();
+                for(int i = 0; i<att.count(); ++i){
+                    if(att[i].name().toString()=="Tree"){
                         if(att[i].value().toString() == "Show")
-                            pictureFlow->show();
+                            tree->show();
                         else
                             if(att[i].value().toString() == "Hide")
-                                pictureFlow->hide();
+                                tree->hide();
                     }
                     else{
-                        if(att[i].name().toString()=="IconList"){
+                        if(att[i].name().toString()=="PictureFlow"){
                             if(att[i].value().toString() == "Show")
-                                list->show();
+                                pictureFlow->show();
                             else
                                 if(att[i].value().toString() == "Hide")
-                                    list->hide();
+                                    pictureFlow->hide();
                         }
                         else{
-                            if(att[i].name().toString() == "DownloadLocation")
-                                imageFolder = att[i].value().toString();
+                            if(att[i].name().toString()=="IconList"){
+                                if(att[i].value().toString() == "Show")
+                                    list->show();
+                                else
+                                    if(att[i].value().toString() == "Hide")
+                                        list->hide();
+                            }
+                            else{
+                                if(att[i].name().toString() == "DownloadLocation")
+                                    imageFolder = att[i].value().toString();
+                            }
                         }
                     }
                 }
+            }
+            else{
+                QMessageBox::information(this,"Incorrect File Format", "This is not the right type of file", QMessageBox::Ok);
+                return;
             }
         }
         else{
             QMessageBox::information(this,"Incorrect File Format", "This is not the right type of file", QMessageBox::Ok);
             return;
         }
-        tree->readItemsFromXML(reader, "MovieLibrary");
+        if(!tree->readItemsFromXML(reader, "MovieLibrary"))
+            QMessageBox::information(this,"XML Read Error", "There was an error in the XML text. Error String: "+reader->errorString(), QMessageBox::Ok);;
         setupPictureFlow();
         curFile = fileName;
         setWindowTitle("[*]" + QFileInfo(fileName).completeBaseName());
@@ -450,17 +471,15 @@ void MainWindow::openLibrary(const QString &fileName){
         if(tree->topLevelItemCount()>0){
             tree->setCurrentItem(tree->topLevelItem(0));
             pictureFlow->setCurrentSlide(0);
-            sidebar->populate(tree->topLevelItem(0), tree->getHeaderMap());
+            sidebar->populate(tree->topLevelItem(0), tree->getHeaderMap(), tree->getLinks().value(tree->topLevelItem(0)));
         }
     }
     else{
         QMessageBox::information(this,"Access Denied", "Unable to read from file " + fileName, QMessageBox::Ok);
     }
-
 }
 
 void MainWindow::openInNewWindow(){
-
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open Library"),".", tr("XLibrary Files (*.xlib)"));
 
     if(!fileName.isEmpty()){
@@ -488,7 +507,7 @@ void MainWindow::setupPictureFlow(){
     }
     if(tree->currentItem() != 0){
         pictureFlow->setCurrentSlide(tree->indexOfTopLevelItem(tree->currentItem()));
-        sidebar->populate(tree->currentItem(), tree->getHeaderMap());
+        sidebar->populate(tree->currentItem(), tree->getHeaderMap(), tree->getLinks().value(tree->currentItem()));
     }
 }
 
@@ -497,7 +516,7 @@ void MainWindow::updateCoverFlow(QTreeWidgetItem *item, int col){
 
     if(pictureFlow->slideCount() > i){
         if(item == tree->currentItem())
-            sidebar->populate(item, tree->getHeaderMap());
+            sidebar->populate(item, tree->getHeaderMap(), tree->getLinks().value(item));
         QMap<QString, int> hMap = tree->getHeaderMap();
         if(col == 0 || col == hMap.value("Icon6154")){
             if(!tree->topLevelItem(i)->text(hMap.value("Icon6154")).isEmpty()){
@@ -534,33 +553,36 @@ bool MainWindow::okToContinue()
     return true;
 }
 void MainWindow::treeSelectionChanged(){
+    sidebarTimer->start(100);
     if(pictureFlow->currentSlide() != tree->indexOfTopLevelItem(tree->currentItem())){
-        sidebar->populate(tree->currentItem(), tree->getHeaderMap());
+        //        sidebar->populate(tree->currentItem(), tree->getHeaderMap());
         pictureFlow->setCurrentSlide(tree->indexOfTopLevelItem(tree->currentItem()));
     }
 }
+
+
 void MainWindow::listSelectionChanged(QModelIndex index){
+    sidebarTimer->start(100);
     if(pictureFlow->currentSlide() != index.row()){
         pictureFlow->setCurrentSlide(index.row());
-        sidebar->populate(tree->topLevelItem(index.row()), tree->getHeaderMap());
     }
 }
 void MainWindow::currentSlideChanged(int index){
-    timer->setSingleShot(true);
-
-    timer->start(1500);
-    connect(timer, SIGNAL(timeout()), this, SLOT(timerExpired()));
+    timer->start(1000);
     if(!tree->selectedItems().contains(tree->topLevelItem(index))){
         tree->setCurrentItem(tree->topLevelItem(index));
-        sidebar->populate(tree->topLevelItem(index), tree->getHeaderMap());
     }
 }
-void MainWindow::timerExpired(){
 
+void MainWindow::timerExpired(){
     if(!tree->selectedItems().contains(tree->topLevelItem(pictureFlow->currentSlide()))){
         tree->setCurrentItem(tree->topLevelItem(pictureFlow->currentSlide()));
-        sidebar->populate(tree->topLevelItem(pictureFlow->currentSlide()), tree->getHeaderMap());
     }
+    sidebar->populate(tree->currentItem(), tree->getHeaderMap(), tree->getLinks().value(tree->currentItem()));
+}
+void MainWindow::sidebarTimerExpired(){
+
+    sidebar->populate(tree->currentItem(), tree->getHeaderMap(), tree->getLinks().value(tree->currentItem()));
 }
 
 void MainWindow::closeEvent(QCloseEvent *event){
@@ -592,14 +614,15 @@ void MainWindow::columns(){
             }
             else{
                 if(!tree->isColumnHidden(hMap.value(cb.at(i)->text()))){
-                tree->setColumnHidden(hMap.value(cb.at(i)->text()), true);
-                winmodified =true;
+                    tree->setColumnHidden(hMap.value(cb.at(i)->text()), true);
+                    winmodified =true;
                 }
             }
         }
         for(int i=0; i<le.size(); ++i){
             if(!le[i]->text().isEmpty()){
-                tree->addHeader(le[i]->text());
+                if(!tree->getHeaderMap().contains(le[i]->text()))
+                    tree->addHeader(le[i]->text());
                 winmodified = true;
             }
         }
@@ -612,8 +635,7 @@ void MainWindow::getFilmData(QList<QTreeWidgetItem*> items){
     if(items.isEmpty())
         items = tree->selectedItems();
     QMap<QString, int> hMap = tree->getHeaderMap();
-    movieDataPrompt = new GetMovieDataPromptDialog(items, hMap.value("Title"), hMap.value("Year"), imageFolder, this);
-
+    movieDataPrompt = new GetMovieDataPromptDialog(items, hMap, imageFolder, this);
 
     if(movieDataPrompt->exec()){
         downloading = items.size();
@@ -649,7 +671,7 @@ void MainWindow::filmDataDownloaded(GetMovieData *movieData){
         item->setText(hMap.value("Language"), movieData->language());
         item->setText(hMap.value("imdbID"), movieData->imdbID());
         item->setText(hMap.value("Plot"), movieData->plot());
-
+        tree->setLinks(item, movieData->peopleLinks());
         if(!movieData->poster().isNull()){
             QString iconPath = imageFolder + "/" + movieData->movie() + ".jpg";
             movieData->poster().save(iconPath);

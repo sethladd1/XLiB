@@ -22,55 +22,57 @@
 #include "getmoviedatapromptdialog.h"
 #include "columneditdialog.h"
 #include "sidebar.h"
-
+#include "castandcrewlinks.h"
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    MainWindow(int argc, char *argv[], QWidget *parent = 0); //d
+    MainWindow(int argc, char *argv[], QWidget *parent = 0);
     void openLibrary(const QString &fileName);
 protected:
-    void closeEvent(QCloseEvent *event); //d
+    void closeEvent(QCloseEvent *event);
 signals:
     void playMovie(QTreeWidgetItem* item, int col);
 private slots:
-    void newFile(); //d
+    void newFile();
 
-    void importFiles(); //d
+    void importFiles();
     void updateCoverFlow(QTreeWidgetItem* item,int col);
-    bool save(); //d
-    bool saveAs(); //d
+    bool save();
+    bool saveAs();
     void callGetData();
-    void columns(); //d
-    void getLibraryFile(); //d
-    void getFilmData(QList<QTreeWidgetItem*> items); //d
-    void filmDataDownloaded(GetMovieData *movieData); //d
-    void treeSelectionChanged(); //d
-    void listSelectionChanged(QModelIndex index); //d
-    void currentSlideChanged(int index); //d
-    void dataSorted(int col, Qt::SortOrder); //d
-    void listViewToggled(bool checked); //d
-    void iconViewToggled(bool checked); //d
-    void coverFlowViewToggled(bool checked); //d
-    void play(); //d
+    void columns();
+    void getLibraryFile();
+    void getFilmData(QList<QTreeWidgetItem*> items);
+    void filmDataDownloaded(GetMovieData *movieData);
+    void treeSelectionChanged();
+    void listSelectionChanged(QModelIndex index);
+    void currentSlideChanged(int index);
+    void dataSorted(int col, Qt::SortOrder);
+    void listViewToggled(bool checked);
+    void iconViewToggled(bool checked);
+    void coverFlowViewToggled(bool checked);
+    void play();
     void coverItemActivated(int index);
     void selectCover();
     void removeMovie();
     void timerExpired();
+    void sidebarTimerExpired();
     void openInNewWindow();
     void callOpen();
+
 private:
-    void createActions(); //d
-    void createMenus(); //d
-    void createContextMenu(); //d
-    void createConnections(); //d
+    void createActions();
+    void createMenus();
+    void createContextMenu();
+    void createConnections();
     void createToolBars();\
-    void setupPictureFlow(); //d
-    bool okToContinue(); //d
-    bool saveLibrary(const QString &fileName); //d
-    void writeSettings(QXmlStreamWriter *writer); //d
+    void setupPictureFlow();
+    bool okToContinue();
+    bool saveLibrary(const QString &fileName);
+    void writeSettings(QXmlStreamWriter *writer);
 
     GetMovieDataPromptDialog *movieDataPrompt;
     QMap<GetMovieData*, QTreeWidgetItem*> filmDataItemMap;
@@ -94,10 +96,11 @@ private:
     QString app;
     QSplitter *page;
     QString type;
+    QHash<QTreeWidgetItem*, CastAndCrewLinks*> itemLinksHash;
     QString imageFolder;
     QScrollArea *scrollArea;
     SideBar *sidebar;
-
+    QTimer *sidebarTimer;
     QTimer *timer;
 };
 
