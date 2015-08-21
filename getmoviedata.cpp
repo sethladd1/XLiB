@@ -10,9 +10,9 @@ GetMovieData::GetMovieData(QString title, QString year, bool longPlot, QObject *
     QString query = base + "t=" + title + "&y=" + _year;
     query += longPlot ? "&plot=full&r=xml" : "&plot=short&r=xml";
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-
+    
     reply = manager->get(QNetworkRequest(QUrl(query)));
-
+    
     connect(reply, SIGNAL(finished()), this, SLOT(readxml()));
 }
 
@@ -123,7 +123,7 @@ void GetMovieData::readxml(){
     QXmlStreamReader reader(reply);
     QXmlStreamAttributes att;
     reader.readNextStartElement();
-
+    
     if(reader.name().toString() == "root"){
         att = reader.attributes();
         for(int i = 0; i<att.count(); ++i){
@@ -186,7 +186,7 @@ void GetMovieData::readxml(){
                         TV=true;
                     else
                         TV=false;
-
+                    
                 }
             }
             QNetworkAccessManager *manager = new QNetworkAccessManager(this);
@@ -198,19 +198,50 @@ void GetMovieData::readxml(){
 
 void GetMovieData::setPoster(){
     _poster = _poster.fromData(reply->readAll());
+    QString url = "http://www.imdb.com/title/"+_imdbID+"/";
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    reply = manager->get(QNetworkRequest(QUrl(url)));
+    connect(reply, SIGNAL(finished()), this, SLOT(getLeadingRoles()));
+}
+void GetMovieData::getLeadingRoles(){
+    QRegExp regExp;
+    QString html(reply->readAll());
+    QString name;
+    bool foundNew = false;
+    html.remove("\n");
+    QStringList actorsList = _starring.split(", ", QString::SkipEmptyParts);
+    QString foundActors;
+    int start = html.indexOf("Stars:");
+    int size = html.indexOf("See full cast and crew")-start;
+    regExp.setPattern("itemprop=\"name\">.{3,30}<");
+    if(start>0 && size>0){
+        html = html.mid(start, size);
+        start = html.indexOf(regExp);
+        while(start>0){
+            start+=16;
+            size = html.indexOf("</", start)-start;
+            name = html.mid(start, size);
+            if(!actorsList.contains(name.trimmed(), Qt::CaseSensitive)){
+                foundActors.append(name.trimmed()+", ");
+                foundNew = true;
+            }
+            start = html.indexOf(regExp,start);
+        }
+        if(foundNew)
+            _starring.insert(0, foundActors);
+    }
+    
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
     reply = manager->get(QNetworkRequest(QUrl(creditsURL)));
-    connect(reply, SIGNAL(finished()), this, SLOT(readPeopleLinks()));
+    connect(reply, SIGNAL(finished()), this, SLOT(readPeopleLinks())); 
 }
-void GetMovieData::readPeopleLinks(){
 
+void GetMovieData::readPeopleLinks(){
     QStringList directorsList = _director.split(", ", QString::SkipEmptyParts);
     QStringList writersList =  _writers.split(", ", QString::SkipEmptyParts);
     QStringList actorsList = _starring.split(", ", QString::SkipEmptyParts);
     QRegExp regExp;
-
-    QByteArray arr = reply->readAll();
-    QString html(arr);
+    QString html(reply->readAll());
     html.remove("\n");
     QString pattern;
     QString link;
@@ -231,7 +262,7 @@ void GetMovieData::readPeopleLinks(){
         }
     }
     for(int i = 0; i<actorsList.size(); ++i){
-        person = actorsList[i];
+        person = actorsList[i];    
         if(person.contains("(")){
             person.truncate(person.indexOf("("));
             person = person.trimmed();

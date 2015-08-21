@@ -51,14 +51,13 @@ SideBar::SideBar(QWidget *parent) :QWidget(parent)
 void SideBar::populate(QTreeWidgetItem *item, QMap<QString, int> headerMap, CastAndCrewLinks *links){
 
     QString titlestr = item->text(headerMap.value("Title"));
+    if(item == 0) return;
     if(!item->text(headerMap.value("Year")).isEmpty())
         titlestr += " ("+item->text(headerMap.value("Year")) + ")";
     title->setText(titlestr);
     title->setWordWrap(true);
     title->setAlignment(Qt::AlignHCenter);
     plot->setText("\n" + item->text(headerMap.value("Plot")) + "\n");
-
-
     QPixmap pix(200,200);
     if(!item->text(headerMap.value("Icon6154")).isEmpty())
         pix.load(item->text(headerMap.value("Icon6154")));
@@ -73,7 +72,7 @@ void SideBar::populate(QTreeWidgetItem *item, QMap<QString, int> headerMap, Cast
         castStr = "Starring: ";
         castStrList = item->text(headerMap.value("Starring")).split(", ", QString::SkipEmptyParts);
         for(int i=0; i<castStrList.size(); ++i){
-            if(!links->castLinks.value(castStrList[i]).isEmpty()){
+            if(links !=0 && !links->castLinks.value(castStrList[i]).isEmpty()){
                 castStr.append("<a href=\""+links->castLinks.value(castStrList[i])+"\">"+castStrList[i]+"</a>");
             }
             else
@@ -90,7 +89,7 @@ void SideBar::populate(QTreeWidgetItem *item, QMap<QString, int> headerMap, Cast
         directorStr = "Director: ";
         directorStrList = item->text(headerMap.value("Director")).split(", ", QString::SkipEmptyParts);
         for(int i=0; i<directorStrList.size(); ++i){
-            if(!links->directorLinks.value(directorStrList[i]).isEmpty()){
+            if(links !=0 && !links->directorLinks.value(directorStrList[i]).isEmpty()){
                 directorStr.append("<a href=\""+links->directorLinks.value(directorStrList[i])+"\">"+directorStrList[i]+"</a>");
             }
             else
@@ -107,7 +106,7 @@ void SideBar::populate(QTreeWidgetItem *item, QMap<QString, int> headerMap, Cast
         writerStr = "Writer: ";
         writerStrList = item->text(headerMap.value("Writer")).split(", ", QString::SkipEmptyParts);
         for(int i=0; i<writerStrList.size(); ++i){
-            if(!links->writerLinks.value(writerStrList[i]).isEmpty()){
+            if(links !=0 && !links->writerLinks.value(writerStrList[i]).isEmpty()){
                 writerStr.append("<a href=\""+links->writerLinks.value(writerStrList[i])+"\">"+writerStrList[i]+"</a>");
             }
             else
@@ -120,7 +119,7 @@ void SideBar::populate(QTreeWidgetItem *item, QMap<QString, int> headerMap, Cast
     writer->setText(writerStr);
     //    director->setAlignment(Qt::AlignHCenter);
     if(!item->text(headerMap.value("imdbID")).isEmpty()){
-        imdbURL = "http://www.imdb.com/title/" + item->text(headerMap.value("imdbID"));
+        imdbURL = "http://www.imdb.com/title/" + item->text(headerMap.value("imdbID"))+"/";
         imdbPage->setText("<a href=\""+imdbURL + "\" >Go to IMDb page</a>");
         imdbPage->setToolTip(imdbURL);
     }

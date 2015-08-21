@@ -69,11 +69,11 @@ private:
     void createContextMenu();
     void createConnections();
     void createToolBars();\
+    void createStatusBar();
     void setupPictureFlow();
     bool okToContinue();
     bool saveLibrary(const QString &fileName);
     void writeSettings(QXmlStreamWriter *writer);
-
     GetMovieDataPromptDialog *movieDataPrompt;
     QMap<GetMovieData*, QTreeWidgetItem*> filmDataItemMap;
     QList<QString> unsuccessfulDataDL;

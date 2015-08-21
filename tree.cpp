@@ -5,7 +5,6 @@ Tree::Tree(QWidget *parent)
     setIconSize(QSize(25,25));
     setConnections();
     timer.setSingleShot(true);
-    lineEdit = new QLineEdit();
     setMouseTracking(true);
 }
 Tree::Tree(const QStringList columns, QList<QTreeWidgetItem*> items, QWidget *parent) : QTreeWidget(parent) {
@@ -14,9 +13,9 @@ Tree::Tree(const QStringList columns, QList<QTreeWidgetItem*> items, QWidget *pa
     setHeaderLabels(columns);
     setMouseTracking(true);
     timer.setSingleShot(true);
-       addTopLevelItems(items);
-
+    addTopLevelItems(items);
 }
+
 Tree::Tree(const QStringList columns, QWidget *parent) : QTreeWidget(parent){
     setIconSize(QSize(25,25));
     setConnections();
@@ -406,7 +405,7 @@ QMap<QString,int> Tree::getHeaderMap(){
 }
 void Tree::respondToClick(QTreeWidgetItem* item, int col){
     if(item == curItem && !timer.isActive()){
-        lineEdit = new QLineEdit(item->text(col), this);
+        lineEdit = new QLineEdit (item->text(col), this);
 
         lineEdit->selectAll();
         lineEdit->setFocus();
@@ -414,7 +413,6 @@ void Tree::respondToClick(QTreeWidgetItem* item, int col){
         setItemWidget(currentItem(), currentColumn(), lineEdit);
         lineEdit->resize(columnWidth(col), 30);
         lineEditIndex = indexFromItem(item, col);
-        timer.start(1000);
     }
     else{
         timer.start(1000);
@@ -426,11 +424,19 @@ void Tree::editFinished(){
     QString str = lineEdit->text();
     removeItemWidget(topLevelItem(lineEditIndex.row()),lineEditIndex.column());
     topLevelItem(lineEditIndex.row())->setText(lineEditIndex.column(), str);
+
 }
 void Tree::addHeader(QString header){
     setColumnCount(columnCount()+1);
     headerItem()->setText(columnCount()-1,header);
 }
+void Tree::removeItems(QList<QTreeWidgetItem *> items){
+    for(int i = 0; i<items.size(); ++i){
+        itemLinksHash.remove(items[i]);
+        delete items[i];
+    }
+}
+
 void Tree::activate(QModelIndex index){
     emit itemDoubleClicked(topLevelItem(index.row()), 0);
 }
@@ -439,16 +445,38 @@ void Tree::keyPressEvent(QKeyEvent *event){
         if(indexOfTopLevelItem(currentItem()) > 0){
             setCurrentItem(topLevelItem(indexOfTopLevelItem(currentItem())-1));
             emit itemSelectionChanged();
+            if(!hasFocus())
+                setFocus();
             timer.start(1000);
             curItem = currentItem();
         }
-    }
+    } else
     if(event->key() == Qt::Key_Down){
         if(indexOfTopLevelItem(currentItem()) < topLevelItemCount()-1){
             setCurrentItem(topLevelItem(indexOfTopLevelItem(currentItem())+1));
             emit itemSelectionChanged();
+            if(!hasFocus())
+                setFocus();
             timer.start(1000);
             curItem = currentItem();
         }
-    }
+    } else //if the key is a letter, set current item to first item starting with that letter
+    if(event->key()>0x40 && event->key()<0x5b){
+        for(int i=0; i<topLevelItemCount(); ++i){
+            if(topLevelItem(i)->text(sortColumn()).at(0) >= QChar(event->key()) || topLevelItem(i)->text(sortColumn()).at(0) >= QChar(event->key()+32)){
+                setCurrentItem(topLevelItem(i));
+                emit itemSelectionChanged();
+                return;
+            }
+        }
+    } else
+        if(event->key()>0x20){
+            for(int i=0; i<topLevelItemCount(); ++i){
+                if(topLevelItem(i)->text(sortColumn()).at(0) >= QChar(event->key())){
+                    setCurrentItem(topLevelItem(i));
+                    emit itemSelectionChanged();
+                    return;
+                }
+            }
+        }
 }

@@ -33,6 +33,7 @@ public:
     int episode();
     QString series();
 private:
+
     QString base;
     bool _success;
     QString _movie;
@@ -47,9 +48,6 @@ private:
     int _episode;
     int _season;
     QString _series;
-//    QString awards;
-//    QString metaScore;
-//    QString imdbRating;
     QString _imdbID;
     QImage _poster;
     QString _rating;
@@ -64,6 +62,10 @@ private slots:
     void readxml();
     void setPoster();
     void readPeopleLinks();
+    /** The actor names returned by omdbapi.com are not necessarily the leading roles.
+     * this function scrapes the stars list from the movies imdb page.
+     **/
+    void getLeadingRoles();
 signals:
     void finishedDownloading(GetMovieData* instance);
 

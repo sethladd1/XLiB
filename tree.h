@@ -24,6 +24,7 @@ public:
     void addTopLevelItems(QList<QTreeWidgetItem *> &items);
     QHash<QTreeWidgetItem*, CastAndCrewLinks*> getLinks();
     void setLinks(QTreeWidgetItem* item, CastAndCrewLinks* link);
+    void removeItems(QList<QTreeWidgetItem*> items);
 private:
 
     QTreeWidgetItem* readDirectoryFromXML(QXmlStreamReader *reader);
@@ -53,7 +54,6 @@ private slots:
 public slots:
     void openFile(QTreeWidgetItem *item, int column);
     void activate(QModelIndex index);
-
 };
 
 #endif // TREE_H

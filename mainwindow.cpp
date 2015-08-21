@@ -169,6 +169,10 @@ void MainWindow::createMenus(){
     actions.append(columnAction);
     viewMenu->addActions(actions);
 }
+void MainWindow::createStatusBar(){
+
+}
+
 
 void MainWindow::createActions(){
     playAction = new QAction("Play", this);
@@ -287,9 +291,7 @@ void MainWindow::removeMovie(){
     QList<QTreeWidgetItem*> removeItems = tree->selectedItems();
     int prev = tree->indexOfTopLevelItem(removeItems[0])-1;
     int next = prev+1;
-    for(int i = 0; i<removeItems.size(); ++i){
-        delete removeItems[i];
-    }
+    tree->removeItems(removeItems);
     setupPictureFlow();
     if(prev >= 0){
         tree->setCurrentItem(tree->topLevelItem(prev));
@@ -375,16 +377,15 @@ void MainWindow::importFiles(){
                     size = QString().number(d/1000,'f',1) +"KB";
                 else
                     size = QString().number(d,'f',1) +"B";
-        treeItem->setText(hMap.value("Size"), size);       
+        treeItem->setText(hMap.value("Size"), size);
         items.append(treeItem);
     }
     if(items.size()){
-        setupPictureFlow();
         setWindowModified(true);
         getFilmData(items);
         tree->addTopLevelItems(items);
         tree->setCurrentItem(treeItem);
-        sidebar->populate(treeItem, hMap, tree->getLinks().value(treeItem));
+        setupPictureFlow();
     }
 }
 
