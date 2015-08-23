@@ -369,6 +369,7 @@ int Tree::locate(QStringList list, QString str) const{
 
 void Tree::openFile(QTreeWidgetItem *item, int column){
     if(item !=0){
+        qDebug()<< QSysInfo::productType();
         QProcess pro;
         QStringList args;
         QMap<QString, int> hMap = getHeaderMap();
@@ -392,8 +393,8 @@ void Tree::openFile(QTreeWidgetItem *item, int column){
             if(QSysInfo::kernelType() == "linux")
                 pro.startDetached("xdg-open", args);
             else
-                if(QSysInfo::kernelType() == "windows")
-                    pro.startDetached(path);
+                if(QSysInfo::productType() == "windows")
+                   pro.startDetached("cmd /Q /C \"start " + path +"\"");
 
     }
 }
@@ -470,7 +471,7 @@ void Tree::keyPressEvent(QKeyEvent *event){
             }
         }
     } else
-        if(event->key()>0x20){
+        if(event->key()>0x20){ // if key is non-alpha printable character, set current item to first item starting with that letter
             for(int i=0; i<topLevelItemCount(); ++i){
                 if(topLevelItem(i)->text(sortColumn()).at(0) >= QChar(event->key())){
                     setCurrentItem(topLevelItem(i));

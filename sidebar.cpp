@@ -149,8 +149,8 @@ void SideBar::linkActivated(QString link){
         if(QSysInfo::kernelType() == "linux")
             pro.startDetached("xdg-open", args);
         else
-            if(QSysInfo::kernelType() == "windows")
-                pro.startDetached("start", args);
+            if(QSysInfo::productType() == "windows")
+                pro.startDetached("cmd /Q /C \"start " + link +"\"");
     }
 }
 void SideBar::starringLinkHovered(QString link){
