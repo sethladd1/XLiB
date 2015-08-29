@@ -35,6 +35,12 @@ ColumnEditDialog::ColumnEditDialog(Tree *tree, QWidget *parent) : QDialog(parent
     connect(buttons, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttons, SIGNAL(rejected()), this, SLOT(reject()));
 }
+ColumnEditDialog::~ColumnEditDialog(){
+    int childCount = children().size();
+    for(int i=0; i<childCount; ++i){
+        delete children().at(0);
+    }
+}
 
 void ColumnEditDialog::newColumn(){
 

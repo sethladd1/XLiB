@@ -19,6 +19,7 @@ class SideBar : public QWidget
     Q_OBJECT
 public:
     SideBar(QWidget *parent=0);
+    ~SideBar();
     void populate(QTreeWidgetItem *item, QMap<QString, int> headerMap, CastAndCrewLinks *links);
     void clear();
 private:

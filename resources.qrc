@@ -11,5 +11,6 @@
         <file>Icons/2-Movies-icon2.png</file>
         <file>Icons/layout-grid2.png</file>
         <file>Icons/Play.png</file>
+        <file>Icons/button-close.png</file>
     </qresource>
 </RCC>

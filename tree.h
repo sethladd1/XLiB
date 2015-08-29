@@ -25,10 +25,12 @@ public:
     QHash<QTreeWidgetItem*, CastAndCrewLinks*> getLinks();
     void setLinks(QTreeWidgetItem* item, CastAndCrewLinks* link);
     void removeItems(QList<QTreeWidgetItem*> items);
+    QList<QTreeWidgetItem*> topLevelItems();
 private:
 
-    QTreeWidgetItem* readDirectoryFromXML(QXmlStreamReader *reader);
-    void writeDirectory(QXmlStreamWriter *writer, QTreeWidgetItem *item);
+    bool readDirectory(QXmlStreamReader *reader, QTreeWidgetItem* item);
+    bool readFile(QXmlStreamReader *reader, QTreeWidgetItem* item);
+    void writeDirectory(QTreeWidgetItem *item, QXmlStreamWriter *writer);
 
     void createContextMenu();
     void setConnections();
@@ -41,17 +43,23 @@ private:
      * searches list for a string matching str, after replaceNonAlphanum call
      */
     int locate(QStringList list, QString str) const;
+    void writeFile(QTreeWidgetItem *item, QXmlStreamWriter* writer);
+
     QLineEdit *lineEdit;
-    QModelIndex lineEditIndex;
+    int lineEditColumn;
     QTreeWidgetItem* curItem;
     QTimer timer;
     void keyPressEvent(QKeyEvent *event);
     QHash<QTreeWidgetItem*, CastAndCrewLinks*> itemLinksHash;
+    QList<QTreeWidgetItem*> _topLevelItems;
+    QTreeWidgetItem* lineEditItem;
+
 private slots:
     void respondToClick(QTreeWidgetItem* item, int col);
     void editFinished();
 
 public slots:
+    void editItem(QTreeWidgetItem *item, int column);
     void openFile(QTreeWidgetItem *item, int column);
     void activate(QModelIndex index);
 };

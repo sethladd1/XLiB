@@ -17,6 +17,7 @@ public:
     ColumnEditDialog(Tree *tree, QWidget *parent = 0);
     QList<QLineEdit* > getNewColumns();
     QList<QCheckBox*> getExistingColumns();
+    ~ColumnEditDialog();
 private slots:
     void newColumn();
 private:

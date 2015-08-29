@@ -3,6 +3,7 @@
 GetMovieData::GetMovieData(QString title, QString year, bool longPlot, QObject *parent)
     : QObject(parent), _year(year), _season(0), _episode(0)
 {
+    downloading=true;
     base = "http://www.omdbapi.com/?";
     title = title.trimmed();
     TV = false;
@@ -10,30 +11,42 @@ GetMovieData::GetMovieData(QString title, QString year, bool longPlot, QObject *
     QString query = base + "t=" + title + "&y=" + _year;
     query += longPlot ? "&plot=full&r=xml" : "&plot=short&r=xml";
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-    
     reply = manager->get(QNetworkRequest(QUrl(query)));
-    
+
     connect(reply, SIGNAL(finished()), this, SLOT(readxml()));
 }
+GetMovieData::~GetMovieData(){
+    int childCount = children().size();
+    for(int i=0; i<childCount; ++i){
+        delete children().at(0);
+    }
+}
 
-GetMovieData::GetMovieData(QString series, int season, int episode, QString year, bool longPlot, QObject *parent)
-    : QObject(parent), _series(series), _year(year), _season(season), _episode(episode)
+GetMovieData::GetMovieData(QString series, int season, int episode, bool longPlot, QObject *parent)
+    : QObject(parent), _series(series), _season(season), _episode(episode)
 {
+    downloading=true;
     base = "http://www.omdbapi.com/?";
     TV = true;
     series = series.trimmed();
     series.replace(" ", "+");
-    QString query = base + "t=" + series + "&season=" + QString().number(season) + "&episode=" + QString().number(episode) + "&y=" + _year;
+
+    QString query = base + "t=" + series + "&season=" + QString().number(season) + "&episode=" + QString().number(episode);
     query += longPlot ? "&plot=full&r=xml" : "&plot=short&r=xml";
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
     reply = manager->get(QNetworkRequest(QUrl(query)));
     connect(reply, SIGNAL(finished()), this, SLOT(readxml()));
+    _season = -1;
+    _episode = -1;
 }
 
 GetMovieData::GetMovieData(QString imdbID, bool longPlot, QObject *parent) : QObject(parent){
+    downloading=true;
     base = "http://www.omdbapi.com/?";
     imdbID = imdbID.trimmed();
     _imdbID = imdbID;
+    _season = -1;
+    _episode = -1;
     QString query = base + "i=" + _imdbID;
     query += longPlot ? "&plot=full&r=xml" : "&plot=short&r=xml";
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
@@ -118,11 +131,39 @@ QString GetMovieData::imdbID(){
 CastAndCrewLinks* GetMovieData::peopleLinks(){
     return links;
 }
+QString GetMovieData::type(){
+    return _type;
+}
+QString GetMovieData::seriesID(){
+    return _seriesID;
+}
+void GetMovieData::closeConnection(){
+    if(downloading){
+        downloading =false;
+        reply->abort();
+    emit finishedDownloading(this);
+    }
+}
 
 void GetMovieData::readxml(){
+    if(!downloading){
+        reply->abort();
+        return;
+    }
     QXmlStreamReader reader(reply);
+
     QXmlStreamAttributes att;
-    reader.readNextStartElement();
+    if(!reader.readNextStartElement()){
+        _success = false;
+        emit finishedStep(4);
+        if(!downloading){
+            reply->abort();
+            return;
+        }
+        downloading =false;
+        emit finishedDownloading(this);
+        return;
+    }
     
     if(reader.name().toString() == "root"){
         att = reader.attributes();
@@ -130,6 +171,12 @@ void GetMovieData::readxml(){
             if(att.at(i).name().toString() == "response"){
                 _success = (att.at(i).value().toString() == "True");
                 if(!_success){
+                    emit finishedStep(4);
+                    if(!downloading){
+                        reply->abort();
+                        return;
+                    }
+                    downloading =false;
                     emit finishedDownloading(this);
                     return;
                 }
@@ -182,28 +229,51 @@ void GetMovieData::readxml(){
                     creditsURL = "http://www.imdb.com/title/"+_imdbID + "/fullcredits";
                 }
                 if(att.at(i).name().toString() == "type"){
-                    if(att.at(i).value().toString()=="episode")
-                        TV=true;
-                    else
-                        TV=false;
+                    _type = att.at(i).value().toString();
                     
+                }
+                if(att.at(i).name().toString() == "series"){
+                    _series = att.at(i).value().toString();
+                }
+                if(att.at(i).name().toString() == "seriesID"){
+                    _seriesID = att.at(i).value().toString();
+                }
+                if(att.at(i).name().toString() == "season"){
+                    _season = att.at(i).value().toString().toInt();
+                }
+                if(att.at(i).name().toString() == "episode"){
+                    _episode = att.at(i).value().toString().toInt();
                 }
             }
             QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+            if(!downloading){
+                reply->abort();
+                return;
+            }
             reply = manager->get(QNetworkRequest(_posterURL));
             connect(reply, SIGNAL(finished()), this, SLOT(setPoster()));
+            emit finishedStep(1);
         }
     }
 }
 
 void GetMovieData::setPoster(){
+    if(!downloading){
+        reply->abort();
+        return;
+    }
     _poster = _poster.fromData(reply->readAll());
     QString url = "http://www.imdb.com/title/"+_imdbID+"/";
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
     reply = manager->get(QNetworkRequest(QUrl(url)));
     connect(reply, SIGNAL(finished()), this, SLOT(getLeadingRoles()));
+    emit finishedStep(1);
 }
 void GetMovieData::getLeadingRoles(){
+    if(!downloading){
+        reply->abort();
+        return;
+    }
     QRegExp regExp;
     QString html(reply->readAll());
     QString name;
@@ -230,13 +300,21 @@ void GetMovieData::getLeadingRoles(){
         if(foundNew)
             _starring.insert(0, foundActors);
     }
-    
+    if(!downloading){
+        reply->abort();
+        return;
+    }
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
     reply = manager->get(QNetworkRequest(QUrl(creditsURL)));
     connect(reply, SIGNAL(finished()), this, SLOT(readPeopleLinks())); 
+    emit finishedStep(1);
 }
 
 void GetMovieData::readPeopleLinks(){
+    if(!downloading){
+        reply->abort();
+        return;
+    }
     QStringList directorsList = _director.split(", ", QString::SkipEmptyParts);
     QStringList writersList =  _writers.split(", ", QString::SkipEmptyParts);
     QStringList actorsList = _starring.split(", ", QString::SkipEmptyParts);
@@ -289,5 +367,11 @@ void GetMovieData::readPeopleLinks(){
             links->writerLinks.insert(writersList[i], link);
         }
     }
+    if(!downloading){
+        reply->abort();
+        return;
+    }
+    downloading =false;
     emit finishedDownloading(this);
+    emit finishedStep(1);
 }

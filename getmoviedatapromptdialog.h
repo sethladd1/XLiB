@@ -27,10 +27,9 @@ class GetMovieDataPromptDialog : public QDialog
 
 public:
     GetMovieDataPromptDialog(QList<QTreeWidgetItem*> items, QMap<QString, int> headerMap, QString _imageFolder, QWidget *parent);
-//    GetMovieDataPromptDialog(QList<QPair<QString, QString> > movie_year, QString _imageFolder="", QWidget *parent=0);
     QList<lineEditStruct*> lineEdits();
     QString getImageFolder();
-
+    ~GetMovieDataPromptDialog();
 
 private:
     void layout();

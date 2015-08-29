@@ -71,15 +71,21 @@ GetMovieDataPromptDialog::GetMovieDataPromptDialog(QList<QTreeWidgetItem*> items
     }
     layout();
 }
+GetMovieDataPromptDialog::~GetMovieDataPromptDialog(){
+    int childCount = children().size();
+    for(int i=0; i<childCount; ++i){
+        delete children().at(0);
+    }
+}
 
 void GetMovieDataPromptDialog::layout(){
     vBox = new QVBoxLayout();
-    hLayout = new QHBoxLayout();
+
     imageFolderLine = new QHBoxLayout();
     imageFolderLine->addWidget(imgFolder);
     imageFolderLine->addWidget(imageFolderEdit);
     imageFolderLine->addWidget(choose);
-
+    hLayout = new QHBoxLayout();
     hLayout->addItem(new QSpacerItem(10, 1));
     hLayout->addWidget(buttons);
     vBox->addWidget(header);
@@ -87,8 +93,7 @@ void GetMovieDataPromptDialog::layout(){
     vBox->addLayout(imageFolderLine);
     vBox->addLayout(hLayout);
     this->setLayout(vBox);
-    this->setMinimumWidth(800);
-    this->setMinimumHeight(700);
+    this->resize(800, 500);
 }
 
 

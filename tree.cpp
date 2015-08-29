@@ -4,7 +4,6 @@ Tree::Tree(QWidget *parent)
     : QTreeWidget(parent){
     setIconSize(QSize(25,25));
     setConnections();
-    timer.setSingleShot(true);
     setMouseTracking(true);
 }
 Tree::Tree(const QStringList columns, QList<QTreeWidgetItem*> items, QWidget *parent) : QTreeWidget(parent) {
@@ -12,7 +11,6 @@ Tree::Tree(const QStringList columns, QList<QTreeWidgetItem*> items, QWidget *pa
     setConnections();
     setHeaderLabels(columns);
     setMouseTracking(true);
-    timer.setSingleShot(true);
     addTopLevelItems(items);
 }
 
@@ -20,11 +18,13 @@ Tree::Tree(const QStringList columns, QWidget *parent) : QTreeWidget(parent){
     setIconSize(QSize(25,25));
     setConnections();
     setHeaderLabels(columns);
-    timer.setSingleShot(true);
     setMouseTracking(true);
 }
+
+
 void Tree::addTopLevelItem(QTreeWidgetItem *item){
     QString str;
+
     for(int i = 0; i < columnCount(); ++i){
         str = item->text(i);
         QStringList list = str.split(" ");
@@ -41,6 +41,25 @@ void Tree::addTopLevelItem(QTreeWidgetItem *item){
             str.append(list[list.size()-1]);
         item->setToolTip(i, str);
     }
+    for(int c = 0; c<item->childCount(); ++c){
+        for(int i = 0; i < columnCount(); ++i){
+            str = item->child(c)->text(i);
+            QStringList list = str.split(" ");
+            str.clear();
+            for(int j=1; j<list.size(); ++j){
+                if(j%15 == 0 && j != list.size()-1){
+                    list.insert(j, "\n");
+                }
+                str.append(list.at(j-1));
+                if(list.at(j-1) != "\n")
+                    str.append(" ");
+            }
+            if(list.size())
+                str.append(list[list.size()-1]);
+            item->child(c)->setToolTip(i, str);
+        }
+    }
+    _topLevelItems.append(item);
     QTreeWidget::addTopLevelItem(item);
 
 }
@@ -64,7 +83,26 @@ void Tree::addTopLevelItems(QList<QTreeWidgetItem *> &items)
                 str.append(list[list.size()-1]);
             items[l]->setToolTip(i, str);
         }
+        for(int c = 0; c<items[l]->childCount(); ++c){
+            for(int i = 0; i < columnCount(); ++i){
+                str = items[l]->child(c)->text(i);
+                QStringList list = str.split(" ");
+                str.clear();
+                for(int j=1; j<list.size(); ++j){
+                    if(j%15 == 0 && j != list.size()-1){
+                        list.insert(j, "\n");
+                    }
+                    str.append(list.at(j-1));
+                    if(list.at(j-1) != "\n")
+                        str.append(" ");
+                }
+                if(list.size())
+                    str.append(list[list.size()-1]);
+                items[l]->child(c)->setToolTip(i, str);
+            }
+        }
     }
+    _topLevelItems.append(items);
     QTreeWidget::addTopLevelItems(items);
 }
 QHash<QTreeWidgetItem*, CastAndCrewLinks*> Tree::getLinks(){
@@ -78,14 +116,93 @@ void Tree::setConnections(){
     connect(this, SIGNAL(itemClicked(QTreeWidgetItem*,int)), this, SLOT(respondToClick(QTreeWidgetItem*, int)));
     connect(this, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)), this, SLOT(openFile(QTreeWidgetItem*,int)));
 }
+bool Tree::readFile(QXmlStreamReader *reader, QTreeWidgetItem* item){
+    QString name, data;
+    QXmlStreamAttributes att;
+    QMap<QString,int> hMap = getHeaderMap();
+    CastAndCrewLinks *links;
+    att = reader->attributes();
+    for(int i = 0; i<att.count(); ++i)
+    {
+        name = att[i].name().toString();
+        data = att[i].value().toString();
+        if(hMap.contains(name)){
+            item->setText(hMap.value(name),data);
+        }
+        else{
+            headerItem()->setText(columnCount(),name);
+            item->setText(columnCount()-1,data);
+            hideColumn(columnCount()-1);
+        }
+        if(name == "Icon6154"){
+            if(QFileInfo(data).exists())
+                item->setIcon(0, QIcon(data));
+        }
+    }
+    links = new CastAndCrewLinks();
+    links->addCastLinks(item->text(hMap.value("Starring")).split(", "));
+    links->addWriterLinks(item->text(hMap.value("Writer")).split(", "));
+    links->addDirectorLinks(item->text(hMap.value("Director")).split(", "));
+    if(reader->readNext() == 1){
+        return false;
+    }
+    QStringList sList;
+    while(!(reader->isEndElement() && reader->name() == "File")){
+        if(reader->isStartElement()){
+            if(reader->name()=="CastLinks"){
+                att = reader->attributes();
+                sList = item->text(hMap.value("Starring")).split(", ", QString::SkipEmptyParts);
+                for(int i = 0; i<att.count(); ++i)
+                {
+                    name = att[i].name().toString();
+                    data = att[i].value().toString();
+                    int index = locate(sList, name);
+                    if(index>=0)
+                        links->castLinks.insert(sList[index], data);
+                }
+            }
+            else if(reader->name()=="DirectorLinks"){
+                att = reader->attributes();
+                sList = item->text(hMap.value("Director")).split(", ", QString::SkipEmptyParts);
+                for(int i = 0; i<att.count(); ++i)
+                {
+                    name = att[i].name().toString();
+                    data = att[i].value().toString();
+                    int index = locate(sList, name);
+                    if(index>=0)
+                        links->directorLinks.insert(sList[index], data);
+                }
+            }
+            else if(reader->name()=="WriterLinks"){
+                att = reader->attributes();
+                sList = item->text(hMap.value("Writer")).split(", ", QString::SkipEmptyParts);
+                for(int i = 0; i<att.count(); ++i)
+                {
+                    name = att[i].name().toString();
+                    data = att[i].value().toString();
+                    int index = locate(sList, name);
+                    if(index>=0)
+                        links->writerLinks.insert(sList[index], data);
+                }
+            }
+            if(reader->readNext() == 1){
+                return false;
+            }
+        }
+        else
+            if(reader->readNext() == 1){
+                return false;
+            }
+    }
+    itemLinksHash.insert(item, links);
+    return true;
+}
 
 bool Tree::readItemsFromXML(QXmlStreamReader *reader, QString treeName){
     QString name, data;
     QTreeWidgetItem *item = new QTreeWidgetItem();
     QXmlStreamAttributes att;
     QMap<QString,int> hMap = getHeaderMap();
-
-    CastAndCrewLinks *links;
     while(reader->name().toString() != treeName || !reader->isEndElement())
     {
         if(reader->readNext()==1)
@@ -93,86 +210,15 @@ bool Tree::readItemsFromXML(QXmlStreamReader *reader, QString treeName){
         if(reader->isStartElement()){
             item = new QTreeWidgetItem();
             if(reader->name() == "File"){
-                att = reader->attributes();
-                for(int i = 0; i<att.count(); ++i)
-                {
-                    name = att[i].name().toString();
-                    data = att[i].value().toString();
-                    if(hMap.contains(name)){
-                        item->setText(hMap.value(name),data);
-                    }
-                    else{
-                        headerItem()->setText(columnCount(),name);
-                        item->setText(columnCount()-1,data);
-                        hideColumn(columnCount()-1);
-                    }
-                    if(name == "Icon6154"){
-                        if(QFileInfo(data).exists())
-                            item->setIcon(0, QIcon(data));
-                    }
-                }
-                links = new CastAndCrewLinks();
-                links->addCastLinks(item->text(hMap.value("Starring")).split(", "));
-                links->addWriterLinks(item->text(hMap.value("Writer")).split(", "));
-                links->addDirectorLinks(item->text(hMap.value("Director")).split(", "));
-                if(reader->readNext() == 1){
+                if(!readFile(reader, item))
                     return false;
-                }
-                QStringList sList;
-                while(!(reader->isEndElement() && reader->name() == "File")){
-                    if(reader->isStartElement()){
-                        if(reader->name()=="CastLinks"){
-                            att = reader->attributes();
-                            sList = item->text(hMap.value("Starring")).split(", ", QString::SkipEmptyParts);
-                            for(int i = 0; i<att.count(); ++i)
-                            {
-                                name = att[i].name().toString();
-                                data = att[i].value().toString();
-                                int index = locate(sList, name);
-                                if(index>=0)
-                                    links->castLinks.insert(sList[index], data);
-                            }
-                        }
-                        else if(reader->name()=="DirectorLinks"){
-                            att = reader->attributes();
-                            sList = item->text(hMap.value("Director")).split(", ", QString::SkipEmptyParts);
-                            for(int i = 0; i<att.count(); ++i)
-                            {
-                                name = att[i].name().toString();
-                                data = att[i].value().toString();
-                                int index = locate(sList, name);
-                                if(index>=0)
-                                    links->directorLinks.insert(sList[index], data);
-                            }
-                        }
-                        else if(reader->name()=="WriterLinks"){
-                            att = reader->attributes();
-                            sList = item->text(hMap.value("Writer")).split(", ", QString::SkipEmptyParts);
-                            for(int i = 0; i<att.count(); ++i)
-                            {
-                                name = att[i].name().toString();
-                                data = att[i].value().toString();
-                                int index = locate(sList, name);
-                                if(index>=0)
-                                    links->writerLinks.insert(sList[index], data);
-                            }
-                        }
-                        if(reader->readNext() == 1){
-                            return false;
-                        }
-                    }
-                    else
-                        if(reader->readNext() == 1){
-                            return false;
-                        }
-                }
-
-                itemLinksHash.insert(item, links);
                 this->addTopLevelItem(item);
             }
             else
                 if(reader->name() == "Directory"){
-                    addTopLevelItem(readDirectoryFromXML(reader));
+                    if(!readDirectory(reader, item))
+                        return false;
+                    this->addTopLevelItem(item);
                 }
                 else{
                     if(reader->name()=="Header"){
@@ -212,66 +258,104 @@ bool Tree::readItemsFromXML(QXmlStreamReader *reader, QString treeName){
     return true;
 }
 /* not tested or used, for future versions*/
-QTreeWidgetItem* Tree::readDirectoryFromXML(QXmlStreamReader *reader){
+bool Tree::readDirectory(QXmlStreamReader *reader, QTreeWidgetItem* item){
+    QString name, data;
     QXmlStreamAttributes att;
-    QString col, data;
-
-    att = reader->attributes();
     QMap<QString,int> hMap = getHeaderMap();
-    QTreeWidgetItem *item = new QTreeWidgetItem();
+    CastAndCrewLinks *links;
+    att = reader->attributes();
     QTreeWidgetItem *child = new QTreeWidgetItem();
     for(int i = 0; i<att.count(); ++i)
     {
-        col = att[i].name().toString();
+        name = att[i].name().toString();
         data = att[i].value().toString();
-        if(hMap.contains(col)){
-            item->setText(hMap.value(col),data);
+        if(hMap.contains(name)){
+            item->setText(hMap.value(name),data);
         }
         else{
-
-            headerItem()->setText(columnCount(),col);
+            headerItem()->setText(columnCount(),name);
             item->setText(columnCount()-1,data);
-            this->hideColumn(columnCount()-1);
+            hideColumn(columnCount()-1);
         }
-        if(col == "Icon6154"){
-            item->setIcon(0, QIcon(data));
+        if(name == "Icon6154"){
+            if(QFileInfo(data).exists())
+                item->setIcon(0, QIcon(data));
         }
     }
-    reader->readNext();
-
-    while(!(reader->name() == "Directory" && reader->isEndElement()))
-    {
-
-        if (reader->isStartElement() && reader->name() == "File"){
-            att = reader->attributes();
-            child = new QTreeWidgetItem;
-            for(int i = 0; i<att.count(); ++i){
-                col = att[i].name().toString();
-                data = att[i].value().toString();
-                if(col == "Icon")
-                    child->setIcon(0,QIcon(data));
-                if(hMap.contains(col))
-                    child->text(hMap.value(col));
-                else{
-                    headerItem()->setText(columnCount(),col);
-                    child->setText(columnCount()-1,data);
-                    this->hideColumn(columnCount()-1);
+    links = new CastAndCrewLinks();
+    links->addCastLinks(item->text(hMap.value("Starring")).split(", "));
+    links->addWriterLinks(item->text(hMap.value("Writer")).split(", "));
+    links->addDirectorLinks(item->text(hMap.value("Director")).split(", "));
+    if(reader->readNext() == 1){
+        return false;
+    }
+    QStringList sList;
+    while(!(reader->isStartElement() && reader->name() == "File") && !(reader->isEndElement() && reader->name() == "Directory")){
+        if(reader->isStartElement()){
+            if(reader->name()=="CastLinks"){
+                att = reader->attributes();
+                sList = item->text(hMap.value("Starring")).split(", ", QString::SkipEmptyParts);
+                for(int i = 0; i<att.count(); ++i)
+                {
+                    name = att[i].name().toString();
+                    data = att[i].value().toString();
+                    int index = locate(sList, name);
+                    if(index>=0)
+                        links->castLinks.insert(sList[index], data);
                 }
             }
-            item->addChild(child);
+            else if(reader->name()=="DirectorLinks"){
+                att = reader->attributes();
+                sList = item->text(hMap.value("Director")).split(", ", QString::SkipEmptyParts);
+                for(int i = 0; i<att.count(); ++i)
+                {
+                    name = att[i].name().toString();
+                    data = att[i].value().toString();
+                    int index = locate(sList, name);
+                    if(index>=0)
+                        links->directorLinks.insert(sList[index], data);
+                }
+            }
+            else if(reader->name()=="WriterLinks"){
+                att = reader->attributes();
+                sList = item->text(hMap.value("Writer")).split(", ", QString::SkipEmptyParts);
+                for(int i = 0; i<att.count(); ++i)
+                {
+                    name = att[i].name().toString();
+                    data = att[i].value().toString();
+                    int index = locate(sList, name);
+                    if(index>=0)
+                        links->writerLinks.insert(sList[index], data);
+                }
+            }
+            if(reader->readNext() == 1){
+                return false;
+            }
         }
         else
-            if(reader->name() == "Directory" && reader->isStartElement()){
-                item->addChild(readDirectoryFromXML(reader));
+            if(reader->readNext() == 1){
+                return false;
             }
-        reader->readNext();
+        itemLinksHash.insert(item, links);
     }
-    return item;
+    while(!(reader->isEndElement() && reader->name() == "Directory")){
+        child = new QTreeWidgetItem();
+        if(reader->name().toString() == "File" && reader->isStartElement()){
+            if(!readFile(reader, child))
+                return false;
+        }
+        if(reader->readNext() == 1)
+            return false;
+        item->addChild(child);
+    }
+    return true;
 
 }
 bool Tree::writeToFile(QXmlStreamWriter *writer, QString treeName){
     QMap<QString, int> hMap = getHeaderMap();
     CastAndCrewLinks *links;
+    QTreeWidgetItem* item;
+    QTreeWidgetItem *child;
     if(writer->device()->isOpen()&&writer->device()->isWritable()){
         writer->writeStartElement(treeName);
         writer->writeStartElement("Header");
@@ -285,40 +369,12 @@ bool Tree::writeToFile(QXmlStreamWriter *writer, QString treeName){
         }
         writer->writeEndElement();
         for(int i = 0; i<topLevelItemCount();++i){
-            if(topLevelItem(i)->childCount()>0){
-                writeDirectory(writer, topLevelItem(i));
+            item = topLevelItem(i);
+            if(item->childCount()>0){
+                writeDirectory(item, writer);
             }
             else{
-                writer->writeStartElement("File");
-                for(int j = 0; j<columnCount(); ++j){
-                    writer->writeAttribute(headerItem()->text(j),topLevelItem(i)->text(j));
-                }
-                if(itemLinksHash.contains(topLevelItem(i))){
-                    QStringList list = topLevelItem(i)->text(getHeaderMap().value("Starring")).split(", ", QString::SkipEmptyParts);
-                    links = itemLinksHash.value(topLevelItem(i));
-                    writer->writeStartElement("CastLinks");
-                    for(int j=0; j<list.size(); ++j){
-
-                        writer->writeAttribute(replaceNonAlphanum(list[j]), links->castLinks.value(list[j]));
-                    }
-                    writer->writeEndElement();
-                    list = topLevelItem(i)->text(getHeaderMap().value("Director")).split(", ", QString::SkipEmptyParts);
-                    writer->writeStartElement("DirectorLinks");
-                    for(int j=0; j<list.size(); ++j){
-
-                        writer->writeAttribute(replaceNonAlphanum(list[j]), links->directorLinks.value(list[j]));
-                    }
-                    writer->writeEndElement();
-                    list = topLevelItem(i)->text(getHeaderMap().value("Writer")).split(", ", QString::SkipEmptyParts);
-                    writer->writeStartElement("WriterLinks");
-                    for(int j=0; j<list.size(); ++j){
-                        writer->writeAttribute(replaceNonAlphanum(list[j]), links->writerLinks.value(list[j]));
-                    }
-                    writer->writeEndElement();
-                }
-
-                writer->writeEndElement();
-
+                writeFile(item, writer);
             }
         }
         writer->writeEndElement();
@@ -326,25 +382,70 @@ bool Tree::writeToFile(QXmlStreamWriter *writer, QString treeName){
     }
     return false;
 }
-void Tree::writeDirectory(QXmlStreamWriter *writer, QTreeWidgetItem *item){
-    writer->writeStartElement("Directory");
-    for(int i = 0; i<columnCount(); ++i){
-        writer->writeAttribute(headerItem()->text(i),item->text(i));
+
+void Tree::writeFile(QTreeWidgetItem *item, QXmlStreamWriter *writer){
+    QMap<QString, int> hMap = getHeaderMap();
+    CastAndCrewLinks *links;
+    writer->writeStartElement("File");
+    for(int j = 0; j<columnCount(); ++j){
+        writer->writeAttribute(headerItem()->text(j),item->text(j));
     }
-    for(int i = 0; i<item->childCount(); ++i){
-        if(item->child(i)->childCount()>0){
-            writeDirectory(writer,item->child(i));
+    if(itemLinksHash.contains(item)){
+        QStringList list = item->text(hMap.value("Starring")).split(", ", QString::SkipEmptyParts);
+        links = itemLinksHash.value(item);
+        writer->writeStartElement("CastLinks");
+        for(int j=0; j<list.size(); ++j){
+            writer->writeAttribute(replaceNonAlphanum(list[j]), links->castLinks.value(list[j]));
         }
-        else{
-            writer->writeStartElement("File");
-            for(int j=0; j<columnCount();++j){
-                writer->writeAttribute(headerItem()->text(i), item->text(j));
-            }
-            writer->writeEndElement();
+        writer->writeEndElement();
+        list = item->text(hMap.value("Director")).split(", ", QString::SkipEmptyParts);
+        writer->writeStartElement("DirectorLinks");
+        for(int j=0; j<list.size(); ++j){
+            writer->writeAttribute(replaceNonAlphanum(list[j]), links->directorLinks.value(list[j]));
         }
+        writer->writeEndElement();
+        list = item->text(hMap.value("Writer")).split(", ", QString::SkipEmptyParts);
+        writer->writeStartElement("WriterLinks");
+        for(int j=0; j<list.size(); ++j){
+            writer->writeAttribute(replaceNonAlphanum(list[j]), links->writerLinks.value(list[j]));
+        }
+        writer->writeEndElement();
     }
     writer->writeEndElement();
-    return;
+}
+
+void Tree::writeDirectory(QTreeWidgetItem *item, QXmlStreamWriter *writer){
+    QMap<QString, int> hMap = getHeaderMap();
+    CastAndCrewLinks *links;
+    writer->writeStartElement("Directory");
+    for(int j = 0; j<columnCount(); ++j){
+        writer->writeAttribute(headerItem()->text(j),item->text(j));
+    }
+    if(itemLinksHash.contains(item)){
+        QStringList list = item->text(hMap.value("Starring")).split(", ", QString::SkipEmptyParts);
+        links = itemLinksHash.value(item);
+        writer->writeStartElement("CastLinks");
+        for(int j=0; j<list.size(); ++j){
+            writer->writeAttribute(replaceNonAlphanum(list[j]), links->castLinks.value(list[j]));
+        }
+        writer->writeEndElement();
+        list = item->text(hMap.value("Director")).split(", ", QString::SkipEmptyParts);
+        writer->writeStartElement("DirectorLinks");
+        for(int j=0; j<list.size(); ++j){
+            writer->writeAttribute(replaceNonAlphanum(list[j]), links->directorLinks.value(list[j]));
+        }
+        writer->writeEndElement();
+        list = item->text(hMap.value("Writer")).split(", ", QString::SkipEmptyParts);
+        writer->writeStartElement("WriterLinks");
+        for(int j=0; j<list.size(); ++j){
+            writer->writeAttribute(replaceNonAlphanum(list[j]), links->writerLinks.value(list[j]));
+        }
+        writer->writeEndElement();
+    }
+    for(int c=0; c<item->childCount();++c){
+        writeFile(item->child(c), writer);
+    }
+    writer->writeEndElement();
 }
 QString Tree::replaceNonAlphanum(QString str) const{
     QString newString;
@@ -369,14 +470,12 @@ int Tree::locate(QStringList list, QString str) const{
 
 void Tree::openFile(QTreeWidgetItem *item, int column){
     if(item !=0){
-        qDebug()<< QSysInfo::productType();
         QProcess pro;
         QStringList args;
         QMap<QString, int> hMap = getHeaderMap();
         int col = hMap.value("Path");
         QString path = item->text(col);
         QString name = item->text(hMap.value("Title"));
-
         if(!QFileInfo(path).exists()){
             if(QMessageBox::information(this,tr("File Not Found"), path + tr(" does not exist. Locate File?"), QMessageBox::Yes, QMessageBox::No)== QMessageBox::Yes){
                 path = QFileDialog::getOpenFileName(this, "Locate " + name);
@@ -385,7 +484,6 @@ void Tree::openFile(QTreeWidgetItem *item, int column){
             else
                 return;
         }
-
         args.append(path);
         if(QFileInfo(path).isExecutable())
             pro.startDetached(path);
@@ -394,7 +492,7 @@ void Tree::openFile(QTreeWidgetItem *item, int column){
                 pro.startDetached("xdg-open", args);
             else
                 if(QSysInfo::productType() == "windows")
-                   pro.startDetached("cmd /Q /C \"start " + path +"\"");
+                    pro.startDetached("cmd /Q /C \"start " + path +"\"");
 
     }
 }
@@ -404,27 +502,27 @@ QMap<QString,int> Tree::getHeaderMap(){
         headerMap.insert(headerItem()->text(i),i);
     return headerMap;
 }
-void Tree::respondToClick(QTreeWidgetItem* item, int col){
-    if(item == curItem && !timer.isActive()){
-        lineEdit = new QLineEdit (item->text(col), this);
+void Tree::editItem(QTreeWidgetItem *item, int column){
+    lineEdit = new QLineEdit(item->text(column), parentWidget());
+    setItemWidget(item, column, lineEdit);
+    lineEdit->selectAll();
+    lineEdit->setFocus();
+    connect(lineEdit, SIGNAL(editingFinished()), this, SLOT(editFinished()));
 
-        lineEdit->selectAll();
-        lineEdit->setFocus();
-        connect(lineEdit, SIGNAL(editingFinished()), this, SLOT(editFinished()));
-        setItemWidget(currentItem(), currentColumn(), lineEdit);
-        lineEdit->resize(columnWidth(col), 30);
-        lineEditIndex = indexFromItem(item, col);
-    }
-    else{
-        timer.start(1000);
-        curItem = item;
-        emit itemSelectionChanged();
-    }
+    lineEdit->resize(columnWidth(column), 30);
+    lineEditColumn = column;
+    lineEditItem = item;
+}
+
+void Tree::respondToClick(QTreeWidgetItem* item, int col){
+    emit itemSelectionChanged();
+
 }
 void Tree::editFinished(){
     QString str = lineEdit->text();
-    removeItemWidget(topLevelItem(lineEditIndex.row()),lineEditIndex.column());
-    topLevelItem(lineEditIndex.row())->setText(lineEditIndex.column(), str);
+    removeItemWidget(lineEditItem,lineEditColumn);
+    lineEditItem->setText(lineEditColumn, str);
+    lineEdit->hide();
 
 }
 void Tree::addHeader(QString header){
@@ -439,45 +537,88 @@ void Tree::removeItems(QList<QTreeWidgetItem *> items){
 }
 
 void Tree::activate(QModelIndex index){
-    emit itemDoubleClicked(topLevelItem(index.row()), 0);
+    if(topLevelItem(index.row()))
+        emit itemDoubleClicked(topLevelItem(index.row()), 0);
 }
 void Tree::keyPressEvent(QKeyEvent *event){
+    QTreeWidgetItem* item = currentItem();
+    QTreeWidgetItem* par = item->parent();
     if(event->key() == Qt::Key_Up){
-        if(indexOfTopLevelItem(currentItem()) > 0){
-            setCurrentItem(topLevelItem(indexOfTopLevelItem(currentItem())-1));
-            emit itemSelectionChanged();
-            if(!hasFocus())
-                setFocus();
-            timer.start(1000);
-            curItem = currentItem();
-        }
-    } else
-    if(event->key() == Qt::Key_Down){
-        if(indexOfTopLevelItem(currentItem()) < topLevelItemCount()-1){
-            setCurrentItem(topLevelItem(indexOfTopLevelItem(currentItem())+1));
-            emit itemSelectionChanged();
-            if(!hasFocus())
-                setFocus();
-            timer.start(1000);
-            curItem = currentItem();
-        }
-    } else //if the key is a letter, set current item to first item starting with that letter
-    if(event->key()>0x40 && event->key()<0x5b){
-        for(int i=0; i<topLevelItemCount(); ++i){
-            if(topLevelItem(i)->text(sortColumn()).at(0) >= QChar(event->key()) || topLevelItem(i)->text(sortColumn()).at(0) >= QChar(event->key()+32)){
-                setCurrentItem(topLevelItem(i));
+        if(par==0){
+            if(indexOfTopLevelItem(currentItem()) > 0){
+                setCurrentItem(topLevelItem(indexOfTopLevelItem(currentItem())-1));
                 emit itemSelectionChanged();
-                return;
+                if(!hasFocus())
+                    setFocus();
             }
         }
-    } else
-        if(event->key()>0x20){ // if key is non-alpha printable character, set current item to first item starting with that letter
-            for(int i=0; i<topLevelItemCount(); ++i){
-                if(topLevelItem(i)->text(sortColumn()).at(0) >= QChar(event->key())){
-                    setCurrentItem(topLevelItem(i));
+        else{
+            int index = par->indexOfChild(item);
+            if(index > 0){
+                setCurrentItem(par->child(index-1));
+            }
+            else{
+                setCurrentItem(par);
+            }
+            if(!hasFocus())
+                setFocus();
+            emit itemSelectionChanged();
+        }
+    }
+    else
+        if(event->key() == Qt::Key_Down){
+            if(par==0){
+                int index = indexOfTopLevelItem(item);
+                if(index < topLevelItemCount()-1){
+                    setCurrentItem(topLevelItem(index+1));
                     emit itemSelectionChanged();
-                    return;
+                    if(!hasFocus())
+                        setFocus();
+                }
+            }
+            else{
+                int index = par->indexOfChild(item);
+                if(index < par->childCount()-1){
+                    setCurrentItem(par->child(index+1));
+                    emit itemSelectionChanged();
+                    if(!hasFocus())
+                        setFocus();
+                }
+                else{
+                    if(indexOfTopLevelItem(par) < topLevelItemCount()-1){
+                        setCurrentItem(topLevelItem(indexOfTopLevelItem(par)+1));
+                        emit itemSelectionChanged();
+                        if(!hasFocus())
+                            setFocus();
+                    }
                 }
             }
         }
+        else
+            if(event->key() == Qt::Key_Right){
+                if(hasFocus())
+                    if(item->childCount())
+                        setCurrentItem(item->child(0));
+            }
+            else //if the key is a letter, set current item to first item starting with that letter
+                if(event->key()>0x40 && event->key()<0x5b){
+                    for(int i=0; i<topLevelItemCount(); ++i){
+                        if(topLevelItem(i)->text(sortColumn()).at(0) >= QChar(event->key()) || topLevelItem(i)->text(sortColumn()).at(0) >= QChar(event->key()+32)){
+                            setCurrentItem(topLevelItem(i));
+                            emit itemSelectionChanged();
+                            return;
+                        }
+                    }
+                }
+                else
+                    // if key is non-alpha printable character, set current item to first item starting with that character
+                    if(event->key()>0x21 &&event->key()<0x7e){
+                        for(int i=0; i<topLevelItemCount(); ++i){
+                            if(topLevelItem(i)->text(sortColumn()).at(0) >= QChar(event->key())){
+                                setCurrentItem(topLevelItem(i));
+                                emit itemSelectionChanged();
+                                return;
+                            }
+                        }
+                    }
 }

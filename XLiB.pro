@@ -20,7 +20,9 @@ SOURCES += main.cpp\
     getmoviedata.cpp \
     getmoviedatapromptdialog.cpp \
     sidebar.cpp \
-    castandcrewlinks.cpp
+    castandcrewlinks.cpp \
+    preferencesdialog.cpp \
+    getseriesdataprompt.cpp
 
 HEADERS  += mainwindow.h \
     tree.h \
@@ -29,7 +31,13 @@ HEADERS  += mainwindow.h \
     getmoviedata.h \
     getmoviedatapromptdialog.h \
     sidebar.h \
-    castandcrewlinks.h
+    castandcrewlinks.h \
+    preferencesdialog.h \
+    getseriesdataprompt.h
 
 RESOURCES += \
     resources.qrc
+
+FORMS += \
+    Options.ui \
+    GetSeriesName.ui

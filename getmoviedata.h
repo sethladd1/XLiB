@@ -9,8 +9,9 @@ class GetMovieData : public QObject
     Q_OBJECT
 public:
     GetMovieData(QString title, QString year="", bool longPlot=false, QObject *parent = 0);
-    GetMovieData(QString series, int season, int episode, QString year="", bool longPlot=false, QObject *parent = 0);
+    GetMovieData(QString series, int season, int episode, bool longPlot=false, QObject *parent = 0);
     GetMovieData(QString imdbID, bool longPlot=false, QObject *parent=0);
+    ~GetMovieData();
     QString year();
     QString starring();
     QImage poster();
@@ -25,6 +26,7 @@ public:
     QString posterURL();
     QString plot();
     QString imdbID();
+    QString type();
 
     CastAndCrewLinks *peopleLinks();
     bool success();
@@ -32,8 +34,8 @@ public:
     int season();
     int episode();
     QString series();
+    QString seriesID();
 private:
-
     QString base;
     bool _success;
     QString _movie;
@@ -54,6 +56,9 @@ private:
     QString _language;
     QString _plot;
     QUrl _posterURL;
+    QString _type;
+    QString _seriesID;
+    bool downloading;
     QNetworkReply *reply;
     QAbstractItemModel *data;
     CastAndCrewLinks *links;
@@ -66,8 +71,10 @@ private slots:
      * this function scrapes the stars list from the movies imdb page.
      **/
     void getLeadingRoles();
+    void closeConnection();
 signals:
     void finishedDownloading(GetMovieData* instance);
+    void finishedStep(int steps);
 
 };
 

@@ -23,7 +23,8 @@ SideBar::SideBar(QWidget *parent) :QWidget(parent)
     writer->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
     writer->setWordWrap(true);
     title->setFont(QFont("Times", 13, QFont::Bold));
-
+    title->setWordWrap(true);
+    title->setAlignment(Qt::AlignHCenter);
     vLayout = new QVBoxLayout(this);
     vLayout->addWidget(title);
     vLayout->addWidget(picture);
@@ -50,13 +51,11 @@ SideBar::SideBar(QWidget *parent) :QWidget(parent)
 }
 void SideBar::populate(QTreeWidgetItem *item, QMap<QString, int> headerMap, CastAndCrewLinks *links){
 
-    QString titlestr = item->text(headerMap.value("Title"));
     if(item == 0) return;
+    QString titlestr = item->text(headerMap.value("Title"));
     if(!item->text(headerMap.value("Year")).isEmpty())
         titlestr += " ("+item->text(headerMap.value("Year")) + ")";
     title->setText(titlestr);
-    title->setWordWrap(true);
-    title->setAlignment(Qt::AlignHCenter);
     plot->setText("\n" + item->text(headerMap.value("Plot")) + "\n");
     QPixmap pix(200,200);
     if(!item->text(headerMap.value("Icon6154")).isEmpty())
@@ -131,6 +130,14 @@ void SideBar::populate(QTreeWidgetItem *item, QMap<QString, int> headerMap, Cast
     setMinimumHeight(height);
     resize(maximumWidth(),height);
 }
+
+SideBar::~SideBar(){
+    int childCount = children().size();
+    for(int i=0; i<childCount; ++i){
+        delete children().at(0);
+    }
+}
+
 void SideBar::clear(){
     imdbPage->clear();
     picture->clear();
