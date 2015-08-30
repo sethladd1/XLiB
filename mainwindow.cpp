@@ -202,11 +202,23 @@ void MainWindow::importSeriesEpisodes(){
     if(dlg->exec()){
         QStringList paths = QFileDialog::getOpenFileNames(this, "Import Files to Library");
         QString name;
-        QTreeWidgetItem *parent = new QTreeWidgetItem();
+        QTreeWidgetItem *parent;
+        QMap<QString, int> hMap = seriesTree->getHeaderMap();
+        bool found = false;
+        for(int i=0; i<seriesTree->topLevelItemCount(); ++i){
+            if(seriesTree->topLevelItem(i)->text(hMap.value("Title")).trimmed()==ui.lineEdit->text().trimmed()){
+                parent=seriesTree->topLevelItem(i);
+                found=true;
+                break;
+            }
+        }
+        if(!found){
+            parent = new QTreeWidgetItem();
         parent->setText(0, ui.lineEdit->text());
+        }
         QTreeWidgetItem *treeItem;
         QIcon icon;
-        QMap<QString, int> hMap = seriesTree->getHeaderMap();
+
         QList<QTreeWidgetItem*> items;
         for (int i = 0; i< paths.size(); ++i){
             name = QFileInfo(paths[i]).completeBaseName();
@@ -763,6 +775,7 @@ void MainWindow::selectCover(){
 }
 
 void MainWindow::removeMovie(){
+    if(tabwidget->currentIndex()==0){
     QList<QTreeWidgetItem*> removeItems = tree->selectedItems();
     int prev = tree->indexOfTopLevelItem(removeItems[0])-1;
     int next = prev+1;
@@ -782,7 +795,27 @@ void MainWindow::removeMovie(){
         else
             sidebar->clear();
 
-
+}
+    else{
+        QList<QTreeWidgetItem*> removeItems = seriesTree->selectedItems();
+        int prev = seriesTree->indexOfTopLevelItem(removeItems[0])-1;
+        int next = prev+1;
+        seriesTree->removeItems(removeItems);
+        setupSeriesPictureFlow();
+        if(prev >= 0){
+            seriesTree->setCurrentItem(seriesTree->topLevelItem(prev));
+            seriesSidebar->populate(seriesTree->topLevelItem(prev), seriesTree->getHeaderMap(), seriesTree->getLinks().value(seriesTree->topLevelItem(prev)));
+            seriesPictureFlow->setCurrentSlide(prev);
+        }
+        else
+            if(next<seriesTree->topLevelItemCount()){
+                seriesTree->setCurrentItem(seriesTree->topLevelItem(next));
+                seriesSidebar->populate(seriesTree->topLevelItem(next), seriesTree->getHeaderMap(), seriesTree->getLinks().value(seriesTree->topLevelItem(next)));
+                seriesPictureFlow->setCurrentSlide(next);
+            }
+            else
+                seriesSidebar->clear();
+    }
 }
 
 bool MainWindow::saveLibrary(const QString &fileName)
@@ -1237,10 +1270,8 @@ void MainWindow::filmDataDownloaded(GetMovieData *movieData){
         unsuccessfulDataDL.append(item->text(hMap.value("Title")));
     ++finished;
     if(finished<downloading){
-        qDebug()<<movieData->movie();
         return;
     }
-    qDebug()<<movieData->movie();
     statusBar()->hide();
     if(unsuccessfulDataDL.size() == 0){
         finished = 0;
