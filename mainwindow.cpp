@@ -4,7 +4,6 @@ MainWindow::MainWindow(int argc, char *argv[], QWidget *parent) :
 {
     app = QFileInfo(argv[0]).absoluteFilePath(); // So I can launch a new instance of this program later
     setWindowIcon(QIcon(":Icons/2-Movies-icon2.png"));
-    qDebug()<<parentWidget();
     tabwidget = new QTabWidget(this);
     setupMovieTab();
     setupSeriesTab();
@@ -291,7 +290,7 @@ void MainWindow::setupSeriesPictureFlow(){
         }
         if(count>0 && picHeight>0 && picWidth>0){
             if(picWidth>picHeight)
-                seriesPictureFlow->setSlideSize(QSize(.75*picWidth/count, .75*picHeight/count));
+                seriesPictureFlow->setSlideSize(QSize(.85*picWidth/count, .85*picHeight/count));
             else
                 seriesPictureFlow->setSlideSize(QSize(picWidth/count, picHeight/count));
         }
@@ -301,8 +300,6 @@ void MainWindow::setupSeriesPictureFlow(){
     else{ //match to current items' siblings
         QTreeWidgetItem* parent = seriesTree->currentItem()->parent();
         int index;
-        if(seriesPictureFlow->slideSize().width()<seriesPictureFlow->slideSize().height())
-            seriesPictureFlow->setSlideSize(QSize(seriesPictureFlow->slideSize().height(), seriesPictureFlow->slideSize().width()));
         for (int i =0; i<parent->childCount(); ++i){
             item = parent->child(i);
             if(item == seriesTree->currentItem())
@@ -327,7 +324,7 @@ void MainWindow::setupSeriesPictureFlow(){
         seriesPictureFlow->setCurrentSlide(index);
         if(count>0 && picHeight>0 && picWidth>0){
             if(picWidth>picHeight)
-                seriesPictureFlow->setSlideSize(QSize(.75*picWidth/count, .75*picHeight/count));
+                seriesPictureFlow->setSlideSize(QSize(.85*picWidth/count, .85*picHeight/count));
             else
                 seriesPictureFlow->setSlideSize(QSize(picWidth/count, picHeight/count));
         }
@@ -402,6 +399,7 @@ void MainWindow::getSeriesData(QList<QTreeWidgetItem*> items){
     QMap<QString, int> hMap = seriesTree->getHeaderMap();
     QString series;
     QList<QTreeWidgetItem*> episodes;
+    QStringList parents;
     bool showErrDlg = false;
     if(items.isEmpty())
         items = seriesTree->selectedItems();
@@ -409,7 +407,9 @@ void MainWindow::getSeriesData(QList<QTreeWidgetItem*> items){
         if(items[i]->childCount())
             items.removeAt(i);
         else{
-            series = items[i]->parent()->text(hMap.value("Series"));
+            series = items[i]->parent()->text(hMap.value("Title"));
+            if(!parents.contains(series))
+                parents.append(series);
             if(seriesEpisodeHash.contains(series)){
                 seriesEpisodeHash[series].append(items[i]);
             }
@@ -424,7 +424,7 @@ void MainWindow::getSeriesData(QList<QTreeWidgetItem*> items){
     if(seriesDataPrompt->exec()){
         downloading = items.size();
         finished = 0;
-        downloadProgress->setMaximum(downloading*4);
+        downloadProgress->setMaximum(downloading*4 + parents.size()*4);
         downloadProgress->setValue(0);
 
         statusBar()->show();
@@ -489,7 +489,9 @@ void MainWindow::listSelectionChanged(QModelIndex index){
 
 void MainWindow::currentSlideChanged(int index){
     timer->start(1000);
+
     if(tabwidget->currentIndex() == 0){
+
         if(!tree->selectedItems().contains(tree->topLevelItem(index))){
             tree->setCurrentItem(tree->topLevelItem(index));
         }
@@ -1223,7 +1225,6 @@ void MainWindow::filmDataDownloaded(GetMovieData *movieData){
                 if(!seriesIDs.contains(movieData->seriesID())){
                     ++downloading;
                     seriesIDs.append(movieData->seriesID());
-                    downloadProgress->setMaximum(downloadProgress->maximum()+4);
                     GetMovieData *getData = new GetMovieData(movieData->seriesID(), true, this);
                     filmDataItemMap.insert(getData, item->parent());
                     connect(getData, SIGNAL(finishedDownloading(GetMovieData*)), this, SLOT(filmDataDownloaded(GetMovieData*)));

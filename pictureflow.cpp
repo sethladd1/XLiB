@@ -596,8 +596,9 @@ void PictureFlowPrivate::resetSlides()
 static QImage prepareSurface(QImage img, int w, int h)
 {
     Qt::TransformationMode mode = Qt::SmoothTransformation;
-    img = img.scaled(w, h, Qt::IgnoreAspectRatio, mode);
-
+    img = img.scaled(w, h, Qt::KeepAspectRatio, mode);
+    h = img.height();
+    w = img.width();
     // slightly larger, to accommodate for the reflection
     int hs = h * 2;
     int hofs = h / 3;
@@ -646,7 +647,6 @@ QImage* PictureFlowPrivate::surface(int slideIndex)
         return 0;
     if(slideIndex >= slideImages.count())
         return 0;
-
     if(surfaceCache.contains(slideIndex))
         return surfaceCache[slideIndex];
 
