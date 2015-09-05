@@ -83,7 +83,7 @@ private slots:
     void treeSelectionChanged();
 
     void listSelectionChanged(QModelIndex index);
-
+    void options();
     void listViewToggled(bool checked);
     void iconViewToggled(bool checked);
     void play();
@@ -119,7 +119,7 @@ private:
     QAction *saveAction, *saveAsAction, *newAction,
     *openAction, *importAction, *playAction, *columnAction,
     *getFilmDataAction, *deleteAction, *selectCoverAction, *listViewAction,
-    *iconViewAction, *pictureFlowAction, *inNewWindow, *here, *edit, *cancelAction;
+    *iconViewAction, *pictureFlowAction, *inNewWindow, *here, *edit, *cancelAction, *preferencesAction;
     QToolButton *canceldownload;
 
     int downloading, finished;

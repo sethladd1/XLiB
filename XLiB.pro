@@ -21,7 +21,6 @@ SOURCES += main.cpp\
     getmoviedatapromptdialog.cpp \
     sidebar.cpp \
     castandcrewlinks.cpp \
-    preferencesdialog.cpp \
     getseriesdataprompt.cpp
 
 HEADERS  += mainwindow.h \
@@ -32,7 +31,6 @@ HEADERS  += mainwindow.h \
     getmoviedatapromptdialog.h \
     sidebar.h \
     castandcrewlinks.h \
-    preferencesdialog.h \
     getseriesdataprompt.h
 
 RESOURCES += \

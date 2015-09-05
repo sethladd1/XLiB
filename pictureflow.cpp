@@ -822,7 +822,7 @@ QRect PictureFlowPrivate::renderSlide(const SlideInfo &slide, int alpha,
 #endif
     int h = buffer.height();
     int w = buffer.width();
-
+//CH^
     if(col1 > col2)
     {
         int c = col2;

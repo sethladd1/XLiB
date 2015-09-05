@@ -6,87 +6,120 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>428</width>
-    <height>212</height>
+    <width>637</width>
+    <height>287</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <item row="2" column="0">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <widget class="QCheckBox" name="autoMove">
-       <property name="text">
-        <string>Move files to folder on import</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <item>
-        <spacer name="horizontalSpacer">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>45</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="folderEdit"/>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButton">
-         <property name="text">
-          <string>Choose</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="autoRename">
-       <property name="text">
-        <string>Rename files to prototype &quot;[Title] ([Year])&quot;</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="autoOpen">
-       <property name="text">
-        <string>Automatically open this library on startup</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="autoSave">
-       <property name="text">
-        <string>Save changes automatically</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-  </layout>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>611</width>
+     <height>261</height>
+    </rect>
+   </property>
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="5" column="0" colspan="3">
+     <widget class="QCheckBox" name="checkBox">
+      <property name="text">
+       <string>Rename series episode files to prototype:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="3" colspan="3">
+     <widget class="QLineEdit" name="seriesFilenameEdit">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>{Series}-S{Season}E{Episode}-{Title}</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0" colspan="3">
+     <widget class="QCheckBox" name="autoRename">
+      <property name="text">
+       <string>Rename movie files to prototype:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="11" column="0" colspan="6">
+     <widget class="QDialogButtonBox" name="buttonBox">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="standardButtons">
+       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="5">
+     <widget class="QPushButton" name="chooseButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Choose</string>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="0" colspan="6">
+     <widget class="QCheckBox" name="autoSave">
+      <property name="text">
+       <string>Automatically save changes</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1" colspan="4">
+     <widget class="QLineEdit" name="folderEdit">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="9" column="0" colspan="6">
+     <widget class="QCheckBox" name="autoOpen">
+      <property name="text">
+       <string>Automatically open this library on startup</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="3" colspan="3">
+     <widget class="QLineEdit" name="movieFilenameEdit">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>{Title} ({Year})</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0" colspan="6">
+     <widget class="QCheckBox" name="autoMove">
+      <property name="text">
+       <string>Move files to designated directory on import and organize into subfolders</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0" alignment="Qt::AlignRight">
+     <widget class="QLabel" name="folderLabel">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Directory: </string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <zorder>buttonBox</zorder>
+  <zorder>buttonBox</zorder>
+  <zorder>TVLabel</zorder>
  </widget>
  <resources/>
  <connections>
@@ -97,8 +130,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>227</x>
-     <y>190</y>
+     <x>296</x>
+     <y>243</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -113,12 +146,76 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>295</x>
-     <y>196</y>
+     <x>364</x>
+     <y>243</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
      <y>211</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>autoMove</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>folderEdit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>115</x>
+     <y>27</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>211</x>
+     <y>59</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>autoMove</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>chooseButton</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>334</x>
+     <y>30</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>561</x>
+     <y>66</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>autoRename</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>movieFilenameEdit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>225</x>
+     <y>101</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>354</x>
+     <y>102</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>seriesFilenameEdit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>244</x>
+     <y>143</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>366</x>
+     <y>149</y>
     </hint>
    </hints>
   </connection>

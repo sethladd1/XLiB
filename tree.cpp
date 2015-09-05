@@ -21,7 +21,6 @@ Tree::Tree(const QStringList columns, QWidget *parent) : QTreeWidget(parent){
     setMouseTracking(true);
 }
 
-
 void Tree::addTopLevelItem(QTreeWidgetItem *item){
     QString str;
 

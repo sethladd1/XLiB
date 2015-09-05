@@ -20,6 +20,8 @@ MainWindow::MainWindow(int argc, char *argv[], QWidget *parent) :
     createStatusBar();
     expanded = 0;
     tree->setFocus();
+    downloading = 0;
+    finished = 0;
     if(argc>1){
         QTimer *t = new QTimer(this);
         openFile = argv[argc-1];
@@ -72,7 +74,7 @@ void MainWindow::setupMovieTab(){
     list->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     pictureFlow = new PictureFlow(this);
-    pictureFlow->setSlideSize(QSize(230, 300));
+    pictureFlow->setSlideSize(QSize(400, 400));
     pictureFlow->setMinimumHeight(300);
     QSplitter *vertPage = new QSplitter(Qt::Vertical, this);
     timer = new QTimer(this);
@@ -141,7 +143,7 @@ void MainWindow::setupSeriesTab(){
     seriesList->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     seriesPictureFlow = new PictureFlow(this);
-    seriesPictureFlow->setSlideSize(QSize(230, 300));
+    seriesPictureFlow->setSlideSize(QSize(400, 400));
     seriesPictureFlow->setMinimumHeight(300);
     QSplitter *vertPage = new QSplitter(Qt::Vertical, this);
     seriesTimer = new QTimer(this);
@@ -213,7 +215,7 @@ void MainWindow::importSeriesEpisodes(){
         }
         if(!found){
             parent = new QTreeWidgetItem();
-        parent->setText(0, ui.lineEdit->text());
+            parent->setText(0, ui.lineEdit->text());
         }
         QTreeWidgetItem *treeItem;
         QIcon icon;
@@ -244,10 +246,8 @@ void MainWindow::importSeriesEpisodes(){
 
         }
         if(items.size()){
-
             parent->addChildren(items);
             getSeriesData(items);
-
             seriesTree->addTopLevelItem(parent);
             setWindowModified(true);
             seriesTree->setCurrentItem(parent);
@@ -288,12 +288,6 @@ void MainWindow::setupSeriesPictureFlow(){
             }
             pictureFlowHash.insert(item, i);
         }
-        if(count>0 && picHeight>0 && picWidth>0){
-            if(picWidth>picHeight)
-                seriesPictureFlow->setSlideSize(QSize(.85*picWidth/count, .85*picHeight/count));
-            else
-                seriesPictureFlow->setSlideSize(QSize(picWidth/count, picHeight/count));
-        }
         seriesPictureFlow->setCurrentSlide(seriesTree->indexOfTopLevelItem(seriesTree->currentItem()));
         seriesPictureFlowTopLevel = true;
     }
@@ -322,12 +316,6 @@ void MainWindow::setupSeriesPictureFlow(){
             pictureFlowHash.insert(item, i);
         }
         seriesPictureFlow->setCurrentSlide(index);
-        if(count>0 && picHeight>0 && picWidth>0){
-            if(picWidth>picHeight)
-                seriesPictureFlow->setSlideSize(QSize(.85*picWidth/count, .85*picHeight/count));
-            else
-                seriesPictureFlow->setSlideSize(QSize(picWidth/count, picHeight/count));
-        }
     }
     if(seriesTree->currentItem() != 0)
         seriesSidebar->populate(seriesTree->currentItem(), seriesTree->getHeaderMap(), seriesTree->getLinks().value(seriesTree->currentItem()));
@@ -354,12 +342,6 @@ void MainWindow::setupPictureFlow(){
             pictureFlow->setSlide(i,QFileIconProvider().icon(QFileInfo(item->text(hMap.value("Path")))).pixmap(pictureFlow->slideSize()));
             pictureFlow->setSlideCaption(i,item->text(hMap.value("Title")));
         }
-    }
-    if(count>0 && picHeight>0 && picWidth>0){
-        if(picWidth>picHeight)
-            pictureFlow->setSlideSize(QSize(.75*picWidth/count, .75*picHeight/count));
-        else
-            pictureFlow->setSlideSize(QSize(picWidth/count, picHeight/count));
     }
     if(tree->currentItem() != 0){
         pictureFlow->setCurrentSlide(tree->indexOfTopLevelItem(tree->currentItem()));
@@ -422,11 +404,17 @@ void MainWindow::getSeriesData(QList<QTreeWidgetItem*> items){
     }
     seriesDataPrompt = new GetSeriesDataPrompt(seriesEpisodeHash, hMap, imageFolder, this);
     if(seriesDataPrompt->exec()){
-        downloading = items.size();
-        finished = 0;
-        downloadProgress->setMaximum(downloading*4 + parents.size()*4);
-        downloadProgress->setValue(0);
-
+        if(downloading==0){
+            downloading = items.size();
+            finished = 0;
+            downloadProgress->setMaximum(downloading*4 + parents.size()*4);
+            downloadProgress->setValue(0);
+        }
+        else{
+            downloading += items.size();
+            downloadProgress->setMaximum(downloading*4 + parents.size()*4);
+            statusBar()->show();
+        }
         statusBar()->show();
         GetMovieData *movieData;
         QList<QPair<QTreeWidgetItem*, seriesLineEditStruct*> >getDataFor = seriesDataPrompt->lineEdits();
@@ -602,13 +590,16 @@ void MainWindow::createMenus(){
     actions.append(saveAction);
     actions.append(saveAsAction);
     fileMenu->addActions(actions);
-
+    editMenu = menuBar()->addMenu(tr("&Edit"));
+    actions.clear();
+    //    actions.append(preferencesAction);
+    actions.append(columnAction);
+    editMenu->addActions(actions);
     viewMenu = menuBar()->addMenu(tr("&View"));
     actions.clear();
     actions.append(listViewAction);
     actions.append(iconViewAction);
     actions.append(pictureFlowAction);
-    actions.append(columnAction);
     viewMenu->addActions(actions);
 }
 
@@ -648,6 +639,7 @@ void MainWindow::createActions(){
     deleteAction = new QAction("Remove Entry", this);
     deleteAction->setShortcut(QKeySequence::Delete);
     cancelAction = new QAction(QIcon(":Icons/button-close.png"), "Cancel Download", this);
+    //    preferencesAction = new QAction("&Preferences", this);
 }
 
 void MainWindow::createConnections(){
@@ -687,12 +679,32 @@ void MainWindow::createConnections(){
     connect(timer, SIGNAL(timeout()), this, SLOT(timerExpired()));
     connect(sidebarTimer, SIGNAL(timeout()), this, SLOT(sidebarTimerExpired()));
     connect(edit, SIGNAL(triggered()), this, SLOT(callEdit()));
+    //    connect(preferencesAction, SIGNAL(triggered()), this, SLOT(options()));
 }
 void MainWindow::callEdit(){
     if(tabwidget->currentIndex() == 0)
-    tree->editItem(tree->currentItem(), tree->currentColumn());
+        tree->editItem(tree->currentItem(), tree->currentColumn());
     else
         seriesTree->editItem(seriesTree->currentItem(), seriesTree->currentColumn());
+}
+void MainWindow::options(){
+    //    Ui_Options options;
+    //    QDialog *dlg = new QDialog(this);
+
+    //    options.setupUi(dlg);
+    //    if(dlg->exec()){
+    //        QFile settings;
+    //        QDir dir;
+    //        dir.setPath(QDir().homePath()+"/.XLibrary");
+    //        if(!dir.exists()){
+    //            dir.mkdir(dir.path());
+    //        }
+    //        settings.setFileName(dir.absolutePath() + "Settings");
+    //        settings.open(QFile::WriteOnly);
+    //        if(options.autoMove->isChecked()){
+    //            settings.write("Auto Move : True");
+    //        }
+    //    }
 }
 
 void MainWindow::createContextMenu(){
@@ -778,26 +790,26 @@ void MainWindow::selectCover(){
 
 void MainWindow::removeMovie(){
     if(tabwidget->currentIndex()==0){
-    QList<QTreeWidgetItem*> removeItems = tree->selectedItems();
-    int prev = tree->indexOfTopLevelItem(removeItems[0])-1;
-    int next = prev+1;
-    tree->removeItems(removeItems);
-    setupPictureFlow();
-    if(prev >= 0){
-        tree->setCurrentItem(tree->topLevelItem(prev));
-        sidebar->populate(tree->topLevelItem(prev), tree->getHeaderMap(), tree->getLinks().value(tree->topLevelItem(prev)));
-        pictureFlow->setCurrentSlide(prev);
-    }
-    else
-        if(next<tree->topLevelItemCount()){
-            tree->setCurrentItem(tree->topLevelItem(next));
-            sidebar->populate(tree->topLevelItem(next), tree->getHeaderMap(), tree->getLinks().value(tree->topLevelItem(next)));
-            pictureFlow->setCurrentSlide(next);
+        QList<QTreeWidgetItem*> removeItems = tree->selectedItems();
+        int prev = tree->indexOfTopLevelItem(removeItems[0])-1;
+        int next = prev+1;
+        tree->removeItems(removeItems);
+        setupPictureFlow();
+        if(prev >= 0){
+            tree->setCurrentItem(tree->topLevelItem(prev));
+            sidebar->populate(tree->topLevelItem(prev), tree->getHeaderMap(), tree->getLinks().value(tree->topLevelItem(prev)));
+            pictureFlow->setCurrentSlide(prev);
         }
         else
-            sidebar->clear();
+            if(next<tree->topLevelItemCount()){
+                tree->setCurrentItem(tree->topLevelItem(next));
+                sidebar->populate(tree->topLevelItem(next), tree->getHeaderMap(), tree->getLinks().value(tree->topLevelItem(next)));
+                pictureFlow->setCurrentSlide(next);
+            }
+            else
+                sidebar->clear();
 
-}
+    }
     else{
         QList<QTreeWidgetItem*> removeItems = seriesTree->selectedItems();
         int prev = seriesTree->indexOfTopLevelItem(removeItems[0])-1;
@@ -880,7 +892,6 @@ void MainWindow::importFiles(){
         importSeriesEpisodes();
         return;
     }
-
     QStringList paths = QFileDialog::getOpenFileNames(this, "Import Files to Library");
     QString name;
     QTreeWidgetItem *treeItem;
@@ -1046,7 +1057,6 @@ void MainWindow::openLibrary(const QString &fileName){
         QMessageBox::information(this,"Access Denied", "Unable to read from file " + fileName, QMessageBox::Ok);
     }
     seriesTree->collapseAll();
-
 }
 
 void MainWindow::openInNewWindow(){
@@ -1099,37 +1109,37 @@ void MainWindow::dataSorted(int col, Qt::SortOrder){
 
 void MainWindow::columns(){
     if(tabwidget->currentIndex() == 0){
-    ColumnEditDialog *columnDialog = new ColumnEditDialog(tree, this);
-    if(columnDialog->exec())
-    {
-        QList<QCheckBox*> cb = columnDialog->getExistingColumns();
-        QList<QLineEdit*> le = columnDialog->getNewColumns();
-        QMap<QString, int> hMap = tree->getHeaderMap();
-        bool winmodified = false;
-        for(int i=0; i<cb.size(); ++i){
-            if(cb.at(i)->isChecked()){
-                if(tree->isColumnHidden(hMap.value(cb.at(i)->text()))){
-                    tree->setColumnHidden(hMap.value(cb.at(i)->text()), false);
+        ColumnEditDialog *columnDialog = new ColumnEditDialog(tree, this);
+        if(columnDialog->exec())
+        {
+            QList<QCheckBox*> cb = columnDialog->getExistingColumns();
+            QList<QLineEdit*> le = columnDialog->getNewColumns();
+            QMap<QString, int> hMap = tree->getHeaderMap();
+            bool winmodified = false;
+            for(int i=0; i<cb.size(); ++i){
+                if(cb.at(i)->isChecked()){
+                    if(tree->isColumnHidden(hMap.value(cb.at(i)->text()))){
+                        tree->setColumnHidden(hMap.value(cb.at(i)->text()), false);
+                        winmodified = true;
+                    }
+                }
+                else{
+                    if(!tree->isColumnHidden(hMap.value(cb.at(i)->text()))){
+                        tree->setColumnHidden(hMap.value(cb.at(i)->text()), true);
+                        winmodified =true;
+                    }
+                }
+            }
+            for(int i=0; i<le.size(); ++i){
+                if(!le[i]->text().isEmpty()){
+                    if(!hMap.contains(le[i]->text()))
+                        tree->addHeader(le[i]->text());
                     winmodified = true;
                 }
             }
-            else{
-                if(!tree->isColumnHidden(hMap.value(cb.at(i)->text()))){
-                    tree->setColumnHidden(hMap.value(cb.at(i)->text()), true);
-                    winmodified =true;
-                }
-            }
+            if(winmodified)
+                setWindowModified(true);
         }
-        for(int i=0; i<le.size(); ++i){
-            if(!le[i]->text().isEmpty()){
-                if(!hMap.contains(le[i]->text()))
-                    tree->addHeader(le[i]->text());
-                winmodified = true;
-            }
-        }
-        if(winmodified)
-            setWindowModified(true);
-    }
     }
     else{
         ColumnEditDialog *columnDialog = new ColumnEditDialog(seriesTree, this);
@@ -1164,7 +1174,6 @@ void MainWindow::columns(){
                 setWindowModified(true);
         }
     }
-
 }
 
 void MainWindow::getFilmData(QList<QTreeWidgetItem*> items){
@@ -1174,12 +1183,19 @@ void MainWindow::getFilmData(QList<QTreeWidgetItem*> items){
     movieDataPrompt = new GetMovieDataPromptDialog(items, hMap, imageFolder, this);
 
     if(movieDataPrompt->exec()){
-        downloading = items.size();
-        finished = 0;
+        if(downloading == 0){
+            downloading = items.size();
+            finished = 0;
 
-        downloadProgress->setMaximum(downloading*4);
-        downloadProgress->setValue(finished);
-        statusBar()->show();
+            downloadProgress->setMaximum(downloading*4);
+            downloadProgress->setValue(0);
+            statusBar()->show();
+        }
+        else{
+            downloading += items.size();
+            downloadProgress->setMaximum(downloading*4);
+            statusBar()->show();
+        }
         GetMovieData *movieData;
         QList<lineEditStruct*> getDataFor = movieDataPrompt->lineEdits();
         imageFolder = movieDataPrompt->getImageFolder();
@@ -1196,7 +1212,6 @@ void MainWindow::getFilmData(QList<QTreeWidgetItem*> items){
             connect(cancelAction, SIGNAL(triggered()), movieData, SLOT(closeConnection()));
         }
     }
-    delete movieDataPrompt;
 }
 
 void MainWindow::filmDataDownloaded(GetMovieData *movieData){
@@ -1288,6 +1303,8 @@ void MainWindow::filmDataDownloaded(GetMovieData *movieData){
     }
     QMessageBox::information(this,"Data Not Found", label, QMessageBox::Ok);
     unsuccessfulDataDL.clear();
+    finished = 0;
+    downloading = 0;
     setupPictureFlow();
     setupSeriesPictureFlow();
 }
@@ -1298,10 +1315,12 @@ void MainWindow::updateProgressBar(int steps){
 void MainWindow::listViewToggled(bool checked){
     if(checked){
         tree->show();
+        seriesTree->show();
         iconViewAction->setChecked(false);
     }
     else{
         tree->hide();
+        seriesTree->hide();
         iconViewAction->setChecked(true);
     }
 }
@@ -1309,20 +1328,26 @@ void MainWindow::iconViewToggled(bool checked){
     if(checked)
     {
         list->show();
+        //        seriesList->show();
         listViewAction->setChecked(false);
     }
     else
     {
         list->hide();
+        //        seriesList->hide();
         listViewAction->setChecked(true);
     }
 
 }
 void MainWindow::coverFlowViewToggled(bool checked){
-    if(checked)
+    if(checked){
         pictureFlow->show();
-    else
+        seriesPictureFlow->show();
+    }
+    else{
         pictureFlow->hide();
+        seriesPictureFlow->hide();
+    }
 }
 
 void MainWindow::play(){
