@@ -951,6 +951,8 @@ void MainWindow::openLibrary(const QString &fileName){
     if(reader->device()->isReadable()){
         tree->clear();
         pictureFlow->clear();
+        seriesTree->clear();
+        seriesPictureFlow->clear();
         if(!reader->readNextStartElement()){
             QMessageBox::information(this,"Incorrect File Format", "This is not the right type of file", QMessageBox::Ok);
             return;
