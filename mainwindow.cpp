@@ -282,7 +282,6 @@ void MainWindow::setupSeriesPictureFlow(){
             }
             else{
                 seriesPictureFlow->setSlideCount(i+1);
-
                 seriesPictureFlow->setSlide(i,QFileIconProvider().icon(QFileInfo(item->text(hMap.value("Path")))).pixmap(pictureFlow->slideSize()));
                 seriesPictureFlow->setSlideCaption(i,item->text(hMap.value("Title")));
             }
@@ -422,27 +421,34 @@ void MainWindow::getSeriesData(QList<QTreeWidgetItem*> items){
         if(!QDir(imageFolder).exists())
             QDir().mkpath(seriesDataPrompt->getImageFolder());
         for(int i = 0; i<getDataFor.size(); ++i){
-            if(getDataFor.at(i).second->imdbID->isEnabled())
+            if(getDataFor.at(i).second->imdbID->isEnabled() && !getDataFor.at(i).second->imdbID->text().isEmpty()){
                 movieData = new GetMovieData(getDataFor.at(i).second->imdbID->text(), true, this);
+                filmDataItemMap.insert(movieData, getDataFor.at(i).first);
+                connect(movieData, SIGNAL(finishedDownloading(GetMovieData*)), this, SLOT(filmDataDownloaded(GetMovieData*)));
+                connect(movieData, SIGNAL(finishedStep(int)), this, SLOT(updateProgressBar(int)));
+                connect(cancelAction, SIGNAL(triggered()), movieData, SLOT(closeConnection()));
+            }
             else
             {
                 bool *ok = new bool;
                 *ok = true;
                 int season = getDataFor.at(i).second->season->text().toInt(ok,10);
                 int episode = getDataFor.at(i).second->episode->text().toInt(ok,10);
-                if(*ok)
+                if(*ok){
                     movieData = new GetMovieData(getDataFor[i].first->parent()->text(hMap.value("Title")), season, episode, true, this);
+                    filmDataItemMap.insert(movieData, getDataFor.at(i).first);
+                    connect(movieData, SIGNAL(finishedDownloading(GetMovieData*)), this, SLOT(filmDataDownloaded(GetMovieData*)));
+                    connect(movieData, SIGNAL(finishedStep(int)), this, SLOT(updateProgressBar(int)));
+                    connect(cancelAction, SIGNAL(triggered()), movieData, SLOT(closeConnection()));
+                }
                 else
                     showErrDlg = true;
             }
-            filmDataItemMap.insert(movieData, getDataFor.at(i).first);
-            connect(movieData, SIGNAL(finishedDownloading(GetMovieData*)), this, SLOT(filmDataDownloaded(GetMovieData*)));
-            connect(movieData, SIGNAL(finishedStep(int)), this, SLOT(updateProgressBar(int)));
-            connect(cancelAction, SIGNAL(triggered()), movieData, SLOT(closeConnection()));
+
         }
     }
     if(showErrDlg){
-        QMessageBox::information(this,"Invalid Input", "Data search was not for some episodes due to invalid input. Values entered in the season and episode boxes must only contain digits.", QMessageBox::Ok);
+        QMessageBox::information(this,"Invalid Input", "Data search was not for some episodes due to invalid input.", QMessageBox::Ok);
     }
 }
 void MainWindow::treeSelectionChanged(){
