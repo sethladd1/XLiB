@@ -8,7 +8,7 @@ GetMovieData::GetMovieData(QString title, QString year, bool longPlot, QObject *
     title = title.trimmed();
     TV = false;
     title.replace(" ", "+");
-    QString query = base + "t=" + title + "&y=" + _year;
+    QString query = base + "t=" + title + "&y=" + _year.trimmed();
     query += longPlot ? "&plot=full&r=xml" : "&plot=short&r=xml";
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
     reply = manager->get(QNetworkRequest(QUrl(query)));

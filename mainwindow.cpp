@@ -9,7 +9,7 @@ MainWindow::MainWindow(int argc, char *argv[], QWidget *parent) :
     setupSeriesTab();
     setCentralWidget(tabwidget);
     resize(700, maximumHeight());
-    setWindowTitle("[*]untitled");
+    setWindowTitle("[*]untitled - XLibrary");
     setWindowModified(false);
     setMouseTracking(true);
     createActions();
@@ -432,8 +432,8 @@ void MainWindow::getSeriesData(QList<QTreeWidgetItem*> items){
             {
                 bool *ok = new bool;
                 *ok = true;
-                int season = getDataFor.at(i).second->season->text().toInt(ok,10);
-                int episode = getDataFor.at(i).second->episode->text().toInt(ok,10);
+                int season = getDataFor.at(i).second->season->text().trimmed().toInt(ok,10);
+                int episode = getDataFor.at(i).second->episode->text().trimmed().toInt(ok,10);
                 if(*ok){
                     movieData = new GetMovieData(getDataFor[i].first->parent()->text(hMap.value("Title")), season, episode, true, this);
                     filmDataItemMap.insert(movieData, getDataFor.at(i).first);
@@ -851,7 +851,7 @@ bool MainWindow::saveLibrary(const QString &fileName)
         writer->writeEndDocument();
         file->close();
         curFile = fileName;
-        setWindowTitle("[*]" + QFileInfo(curFile).fileName());
+        setWindowTitle("[*]" + QFileInfo(curFile).fileName() + " - XLibrary");
         setWindowModified(false);
         delete writer;
         return true;
@@ -1046,7 +1046,7 @@ void MainWindow::openLibrary(const QString &fileName){
         }
 
         curFile = fileName;
-        setWindowTitle("[*]" + QFileInfo(fileName).completeBaseName());
+        setWindowTitle("[*]" + QFileInfo(fileName).completeBaseName() + " - XLibrary");
         setWindowModified(false);
         if(tree->topLevelItemCount()>0){
             tree->setCurrentItem(tree->topLevelItem(0));
@@ -1258,7 +1258,13 @@ void MainWindow::filmDataDownloaded(GetMovieData *movieData){
             }
             seriesTree->setLinks(item, movieData->peopleLinks());
             if(!movieData->poster().isNull()){
-                QString iconPath = imageFolder + "/" + movieData->movie() + ".jpg";
+                QString series;
+                if(item->parent() != 0)
+                    series = item->parent()->text(hMap.value("Title"));
+                QString iconPath = imageFolder + "/" + series + " - " +movieData->movie() + ".jpg";
+                for(int i=1; QFileInfo(iconPath).exists(); ++i){
+                    iconPath = imageFolder + "/" + series + " - " + movieData->movie() + QString().number(i) + ".jpg";
+                }
                 movieData->poster().save(iconPath);
                 item->setText(hMap.value("Icon6154"), iconPath);
                 QIcon icon;
@@ -1282,6 +1288,10 @@ void MainWindow::filmDataDownloaded(GetMovieData *movieData){
             tree->setLinks(item, movieData->peopleLinks());
             if(!movieData->poster().isNull()){
                 QString iconPath = imageFolder + "/" + movieData->movie() + ".jpg";
+                for(int i=1; QFileInfo(iconPath).exists(); ++i){
+                    iconPath = imageFolder + "/" + movieData->movie() + QString().number(i) + ".jpg";
+
+                }
                 movieData->poster().save(iconPath);
                 item->setText(hMap.value("Icon6154"), iconPath);
                 QIcon icon;
