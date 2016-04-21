@@ -484,14 +484,11 @@ void Tree::openFile(QTreeWidgetItem *item, int column){
                 return;
         }
         args.append(path);
-        if(QFileInfo(path).isExecutable())
-            pro.startDetached(path);
+        if(QSysInfo::kernelType() == "linux")
+            pro.startDetached("xdg-open", args);
         else
-            if(QSysInfo::kernelType() == "linux")
-                pro.startDetached("xdg-open", args);
-            else
-                if(QSysInfo::productType() == "windows")
-                    pro.startDetached("cmd /Q /C \"start " + path +"\"");
+            if(QSysInfo::productType() == "windows")
+                pro.startDetached("cmd /Q /C \"start " + path +"\"");
 
     }
 }
